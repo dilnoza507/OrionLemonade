@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build:*)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(npm run lint)",
+      "Bash(node:*)",
+      "Bash(dotnet run)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "Bash(psql:*)",
+      "Bash(findstr:*)",
+      "Bash(dotnet ef database update:*)",
+      "Bash(where:*)",
+      "Bash(dir \"C:\\\\Program Files\\\\PostgreSQL\")",
+      "Bash(set:*)",
+      "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\" -U postgres -h localhost -c \"SELECT 1\")",
+      "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\createdb.exe\" -U postgres -h localhost orion_lemonade)",
+      "Bash(powershell -Command \"$env:PGPASSWORD=''postgres''; & ''C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\createdb.exe'' -U postgres -h localhost -w orion_lemonade\")",
+      "Bash(cmd /c \"set PGPASSWORD=postgres && \"\"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\createdb.exe\"\" -U postgres -h localhost -w orion_lemonade\")",
+      "Bash(dotnet add:*)"
+    ]
+  }
+}
