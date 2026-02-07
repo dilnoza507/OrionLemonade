@@ -13,6 +13,9 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(connectionString));
 
+        // Register DbContext as base type for services that need direct access
+        services.AddScoped<DbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
+
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
         return services;

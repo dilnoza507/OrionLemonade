@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, Pencil, Trash2, X, Shield, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, X, Shield, ShieldCheck, ShieldAlert, Building2 } from 'lucide-react';
 import { getUsers, createUser, updateUser, deleteUser } from '../../api/users';
+import { getBranches } from '../../api/branches';
 
 const ROLES = {
   SuperAdmin: { label: 'Супер Админ', color: 'destructive' },
@@ -17,21 +18,26 @@ const SCOPES = {
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
 
-  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => { loadData(); }, []);
 
-  async function loadUsers() {
+  async function loadData() {
     try {
       setLoading(true);
-      const data = await getUsers();
-      setUsers(data);
+      const [usersData, branchesData] = await Promise.all([
+        getUsers(),
+        getBranches()
+      ]);
+      setUsers(usersData);
+      setBranches(branchesData);
       setError(null);
     } catch (err) {
-      setError('Не удалось загрузить пользователей');
+      setError('Не удалось загрузить данные');
     } finally {
       setLoading(false);
     }
@@ -42,7 +48,7 @@ export default function UsersPage() {
 
   async function handleDelete(id) {
     if (!confirm('Удалить пользователя?')) return;
-    try { await deleteUser(id); await loadUsers(); }
+    try { await deleteUser(id); await loadData(); }
     catch (err) { setError('Не удалось удалить пользователя'); }
   }
 
@@ -51,7 +57,7 @@ export default function UsersPage() {
       if (editingUser) { await updateUser(editingUser.id, data); }
       else { await createUser(data); }
       setIsModalOpen(false);
-      await loadUsers();
+      await loadData();
     } catch (err) { setError('Не удалось сохранить пользователя'); }
   }
 
@@ -88,7 +94,7 @@ export default function UsersPage() {
         </div>
       )}
 
-      {isModalOpen && (<UserModal user={editingUser} onSave={handleSave} onClose={() => setIsModalOpen(false)} />)}
+      {isModalOpen && (<UserModal user={editingUser} branches={branches} onSave={handleSave} onClose={() => setIsModalOpen(false)} />)}
     </div>
   );
 }
@@ -115,10 +121,16 @@ function UserCard({ user, onEdit, onDelete }) {
           {isBlocked ? 'Заблокирован' : 'Активен'}
         </span>
       </div>
-      <div className="flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))] mb-3">
+      <div className="flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))] mb-2">
         <Shield className="w-4 h-4" />
         <span>{SCOPES[user.scope] || user.scope}</span>
       </div>
+      {user.branches && user.branches.length > 0 && (
+        <div className="flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))] mb-2">
+          <Building2 className="w-4 h-4" />
+          <span className="truncate">{user.branches.map(b => b.branchName).join(', ')}</span>
+        </div>
+      )}
       {user.lastLogin && (
         <div className="text-xs text-[hsl(var(--muted-foreground))] mb-3">
           Последний вход: {new Date(user.lastLogin).toLocaleString('ru-RU')}
@@ -132,13 +144,14 @@ function UserCard({ user, onEdit, onDelete }) {
   );
 }
 
-function UserModal({ user, onSave, onClose }) {
+function UserModal({ user, branches, onSave, onClose }) {
   const [formData, setFormData] = useState({
     login: user?.login || '',
     password: '',
     role: user?.role || 'Manager',
     scope: user?.scope || 'OwnBranches',
     isBlocked: user?.isBlocked || false,
+    branchIds: user?.branches?.map(b => b.branchId) || [],
   });
 
   function handleSubmit(e) {
@@ -148,6 +161,15 @@ function UserModal({ user, onSave, onClose }) {
       delete data.password;
     }
     onSave(data);
+  }
+
+  function toggleBranch(branchId) {
+    setFormData(prev => ({
+      ...prev,
+      branchIds: prev.branchIds.includes(branchId)
+        ? prev.branchIds.filter(id => id !== branchId)
+        : [...prev.branchIds, branchId]
+    }));
   }
 
   const inputClass = "w-full px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]";
@@ -184,6 +206,28 @@ function UserModal({ user, onSave, onClose }) {
               ))}
             </select>
           </div>
+          {formData.scope === 'OwnBranches' && branches && branches.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">Филиалы</label>
+              <div className="max-h-32 overflow-y-auto border border-[hsl(var(--border))] rounded-lg p-2 space-y-1">
+                {branches.map((branch) => (
+                  <label key={branch.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-[hsl(var(--muted))] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.branchIds.includes(branch.id)}
+                      onChange={() => toggleBranch(branch.id)}
+                      className="w-4 h-4 rounded border-[hsl(var(--border))]"
+                    />
+                    <span className="text-sm text-[hsl(var(--foreground))]">{branch.name}</span>
+                    <span className="text-xs text-[hsl(var(--muted-foreground))]">({branch.code})</span>
+                  </label>
+                ))}
+              </div>
+              {formData.branchIds.length === 0 && (
+                <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">Выберите хотя бы один филиал</p>
+              )}
+            </div>
+          )}
           {user && (
             <div className="flex items-center gap-2">
               <input type="checkbox" id="isBlocked" checked={formData.isBlocked} onChange={(e) => setFormData({ ...formData, isBlocked: e.target.checked })} className="w-4 h-4 rounded border-[hsl(var(--border))]" />

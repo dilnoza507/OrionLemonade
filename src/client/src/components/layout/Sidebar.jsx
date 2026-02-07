@@ -166,6 +166,9 @@ export default function Sidebar() {
           <SubMenuItem to="/settings/employees">Сотрудники</SubMenuItem>
           <SubMenuItem to="/settings/users">Пользователи</SubMenuItem>
           <SubMenuItem to="/settings/exchange-rates">Курсы валют</SubMenuItem>
+          <SubMenuItem to="/settings/ingredients">Ингредиенты</SubMenuItem>
+          <SubMenuItem to="/settings/expense-categories">Категории расходов</SubMenuItem>
+          <SubMenuItem to="/settings/suppliers">Поставщики</SubMenuItem>
         </MenuGroup>
       </nav>
 

@@ -13,6 +13,14 @@ public class UserDto
     public DateTime? LastLogin { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public List<UserBranchInfoDto> Branches { get; set; } = [];
+}
+
+public class UserBranchInfoDto
+{
+    public int BranchId { get; set; }
+    public string BranchName { get; set; } = string.Empty;
+    public string BranchCode { get; set; } = string.Empty;
 }
 
 public class CreateUserDto
@@ -21,6 +29,7 @@ public class CreateUserDto
     public string Password { get; set; } = string.Empty;
     public UserRole Role { get; set; }
     public UserScope Scope { get; set; }
+    public List<int> BranchIds { get; set; } = [];
 }
 
 public class UpdateUserDto
@@ -30,4 +39,5 @@ public class UpdateUserDto
     public UserRole Role { get; set; }
     public UserScope Scope { get; set; }
     public bool IsBlocked { get; set; }
+    public List<int> BranchIds { get; set; } = [];
 }

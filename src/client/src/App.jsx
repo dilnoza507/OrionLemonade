@@ -23,12 +23,16 @@ import BranchesPage from './pages/settings/BranchesPage';
 import EmployeesPage from './pages/settings/EmployeesPage';
 import UsersPage from './pages/settings/UsersPage';
 import ExchangeRatesPage from './pages/settings/ExchangeRatesPage';
+import IngredientsPage from './pages/settings/IngredientsPage';
+import ExpenseCategoriesPage from './pages/settings/ExpenseCategoriesPage';
+import SuppliersPage from './pages/settings/SuppliersPage';
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const sessionExpired = useAuthStore((state) => state.sessionExpired);
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || sessionExpired) {
     return <Navigate to="/" replace />;
   }
 
@@ -78,6 +82,9 @@ function App() {
           <Route path="/settings/employees" element={<EmployeesPage />} />
           <Route path="/settings/users" element={<UsersPage />} />
           <Route path="/settings/exchange-rates" element={<ExchangeRatesPage />} />
+          <Route path="/settings/ingredients" element={<IngredientsPage />} />
+          <Route path="/settings/expense-categories" element={<ExpenseCategoriesPage />} />
+          <Route path="/settings/suppliers" element={<SuppliersPage />} />
         </Route>
 
         {/* Catch all - redirect to dashboard */}

@@ -11,6 +11,7 @@ export const useAuthStore = create(
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      sessionExpired: false,
 
       login: async (login, password) => {
         set({ isLoading: true, error: null });
@@ -30,6 +31,7 @@ export const useAuthStore = create(
             isAuthenticated: true,
             isLoading: false,
             error: null,
+            sessionExpired: false,
           });
           return true;
         } catch (err) {
@@ -45,13 +47,24 @@ export const useAuthStore = create(
           refreshToken: null,
           isAuthenticated: false,
           error: null,
+          sessionExpired: false,
+        });
+      },
+
+      setSessionExpired: () => {
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false,
+          sessionExpired: true,
         });
       },
 
       refreshAccessToken: async () => {
         const { refreshToken } = get();
         if (!refreshToken) {
-          get().logout();
+          get().setSessionExpired();
           return false;
         }
 
@@ -63,7 +76,7 @@ export const useAuthStore = create(
           });
           return true;
         } catch {
-          get().logout();
+          get().setSessionExpired();
           return false;
         }
       },
