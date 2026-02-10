@@ -11,9 +11,12 @@ import RecipesPage from './pages/RecipesPage';
 import ProductionPage from './pages/ProductionPage';
 import MaterialsPage from './pages/MaterialsPage';
 import ProductsPage from './pages/ProductsPage';
+import ProductStockPage from './pages/ProductStockPage';
 import TransfersPage from './pages/TransfersPage';
 import SalesPage from './pages/SalesPage';
+import SaleReturnsPage from './pages/SaleReturnsPage';
 import ClientsPage from './pages/ClientsPage';
+import PriceListsPage from './pages/PriceListsPage';
 import ExpensesPage from './pages/ExpensesPage';
 import PayrollPage from './pages/PayrollPage';
 import ReportsPage from './pages/ReportsPage';
@@ -63,12 +66,14 @@ function App() {
 
           {/* Warehouse */}
           <Route path="/warehouse/materials" element={<MaterialsPage />} />
-          <Route path="/warehouse/products" element={<ProductsPage />} />
+          <Route path="/warehouse/products" element={<ProductStockPage />} />
           <Route path="/warehouse/transfers" element={<TransfersPage />} />
 
           {/* Sales */}
           <Route path="/sales" element={<SalesPage />} />
+          <Route path="/returns" element={<SaleReturnsPage />} />
           <Route path="/clients" element={<ClientsPage />} />
+          <Route path="/price-lists" element={<PriceListsPage />} />
 
           {/* Finance */}
           <Route path="/expenses" element={<ExpensesPage />} />

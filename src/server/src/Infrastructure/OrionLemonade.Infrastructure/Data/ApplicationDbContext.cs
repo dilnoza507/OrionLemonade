@@ -27,6 +27,20 @@ public class ApplicationDbContext : DbContext
     public DbSet<IngredientReceipt> IngredientReceipts => Set<IngredientReceipt>();
     public DbSet<IngredientWriteOff> IngredientWriteOffs => Set<IngredientWriteOff>();
     public DbSet<IngredientMovement> IngredientMovements => Set<IngredientMovement>();
+    public DbSet<ProductionBatch> ProductionBatches => Set<ProductionBatch>();
+    public DbSet<BatchIngredientConsumption> BatchIngredientConsumptions => Set<BatchIngredientConsumption>();
+    public DbSet<ProductStock> ProductStocks => Set<ProductStock>();
+    public DbSet<ProductMovement> ProductMovements => Set<ProductMovement>();
+    public DbSet<PriceList> PriceLists => Set<PriceList>();
+    public DbSet<PriceListItem> PriceListItems => Set<PriceListItem>();
+    public DbSet<Sale> Sales => Set<Sale>();
+    public DbSet<SaleItem> SaleItems => Set<SaleItem>();
+    public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<Expense> Expenses => Set<Expense>();
+    public DbSet<SaleReturn> SaleReturns => Set<SaleReturn>();
+    public DbSet<SaleReturnItem> SaleReturnItems => Set<SaleReturnItem>();
+    public DbSet<Transfer> Transfers => Set<Transfer>();
+    public DbSet<TransferItem> TransferItems => Set<TransferItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -322,6 +336,356 @@ public class ApplicationDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.CreatedByUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ProductionBatch>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BatchNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.PlannedQuantity).HasPrecision(18, 4);
+            entity.Property(e => e.ActualQuantity).HasPrecision(18, 4);
+            entity.Property(e => e.OutputUnit).HasConversion<string>().HasMaxLength(10);
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.HasIndex(e => e.BatchNumber).IsUnique();
+            entity.HasIndex(e => e.PlannedDate);
+            entity.HasIndex(e => e.Status);
+
+            entity.HasOne(e => e.Recipe)
+                .WithMany()
+                .HasForeignKey(e => e.RecipeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.RecipeVersion)
+                .WithMany()
+                .HasForeignKey(e => e.RecipeVersionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Branch)
+                .WithMany()
+                .HasForeignKey(e => e.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<BatchIngredientConsumption>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PlannedQuantity).HasPrecision(18, 4);
+            entity.Property(e => e.ActualQuantity).HasPrecision(18, 4);
+            entity.Property(e => e.Unit).HasConversion<string>().HasMaxLength(10);
+            entity.HasIndex(e => new { e.ProductionBatchId, e.IngredientId }).IsUnique();
+
+            entity.HasOne(e => e.ProductionBatch)
+                .WithMany(b => b.IngredientConsumptions)
+                .HasForeignKey(e => e.ProductionBatchId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Ingredient)
+                .WithMany()
+                .HasForeignKey(e => e.IngredientId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ProductStock>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Quantity);
+            entity.Property(e => e.UnitCostUsd).HasPrecision(18, 4);
+            entity.Property(e => e.UnitCostTjs).HasPrecision(18, 4);
+            entity.Property(e => e.ExchangeRate).HasPrecision(18, 4);
+            entity.HasIndex(e => new { e.BranchId, e.RecipeId });
+            entity.HasIndex(e => e.ProductionDate);
+
+            entity.HasOne(e => e.Branch)
+                .WithMany()
+                .HasForeignKey(e => e.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Recipe)
+                .WithMany()
+                .HasForeignKey(e => e.RecipeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ProductionBatch)
+                .WithMany()
+                .HasForeignKey(e => e.ProductionBatchId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ProductMovement>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.OperationType).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.Quantity);
+            entity.Property(e => e.BalanceAfter);
+            entity.Property(e => e.DocumentType).HasMaxLength(50);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.HasIndex(e => e.MovementDate);
+            entity.HasIndex(e => new { e.BranchId, e.RecipeId });
+
+            entity.HasOne(e => e.Branch)
+                .WithMany()
+                .HasForeignKey(e => e.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Recipe)
+                .WithMany()
+                .HasForeignKey(e => e.RecipeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ProductionBatch)
+                .WithMany()
+                .HasForeignKey(e => e.ProductionBatchId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PriceList>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.ListType).HasConversion<string>().HasMaxLength(20);
+            entity.HasIndex(e => e.Name);
+
+            entity.HasOne(e => e.Branch)
+                .WithMany()
+                .HasForeignKey(e => e.BranchId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PriceListItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PriceTjs).HasPrecision(18, 2);
+            entity.HasIndex(e => new { e.PriceListId, e.RecipeId }).IsUnique();
+
+            entity.HasOne(e => e.PriceList)
+                .WithMany(p => p.Items)
+                .HasForeignKey(e => e.PriceListId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Recipe)
+                .WithMany()
+                .HasForeignKey(e => e.RecipeId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Sale>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SaleNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.PaymentMethod).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.PaymentStatus).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.TotalTjs).HasPrecision(18, 2);
+            entity.Property(e => e.PaidTjs).HasPrecision(18, 2);
+            entity.Property(e => e.DebtTjs).HasPrecision(18, 2);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.HasIndex(e => e.SaleNumber).IsUnique();
+            entity.HasIndex(e => e.SaleDate);
+            entity.HasIndex(e => e.Status);
+
+            entity.HasOne(e => e.Branch)
+                .WithMany()
+                .HasForeignKey(e => e.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Client)
+                .WithMany()
+                .HasForeignKey(e => e.ClientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SaleItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UnitPriceTjs).HasPrecision(18, 2);
+            entity.Property(e => e.TotalTjs).HasPrecision(18, 2);
+            entity.Property(e => e.UnitCostUsd).HasPrecision(18, 4);
+            entity.Property(e => e.UnitCostTjs).HasPrecision(18, 4);
+            entity.Property(e => e.ExchangeRate).HasPrecision(18, 4);
+
+            entity.HasOne(e => e.Sale)
+                .WithMany(s => s.Items)
+                .HasForeignKey(e => e.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Recipe)
+                .WithMany()
+                .HasForeignKey(e => e.RecipeId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Payment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.AmountTjs).HasPrecision(18, 2);
+            entity.Property(e => e.Method).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.HasIndex(e => e.PaymentDate);
+
+            entity.HasOne(e => e.Sale)
+                .WithMany(s => s.Payments)
+                .HasForeignKey(e => e.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Expense>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.AmountOriginal).HasPrecision(18, 2);
+            entity.Property(e => e.ExchangeRate).HasPrecision(18, 4);
+            entity.Property(e => e.AmountTjs).HasPrecision(18, 2);
+            entity.Property(e => e.Currency).HasConversion<string>().HasMaxLength(10);
+            entity.Property(e => e.Comment).HasMaxLength(1000);
+            entity.Property(e => e.RecurrencePeriod).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.Source).HasConversion<string>().HasMaxLength(20);
+            entity.HasIndex(e => e.ExpenseDate);
+            entity.HasIndex(e => new { e.BranchId, e.CategoryId });
+
+            entity.HasOne(e => e.Branch)
+                .WithMany()
+                .HasForeignKey(e => e.BranchId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Category)
+                .WithMany(c => c.Expenses)
+                .HasForeignKey(e => e.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SaleReturn>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ReturnNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Reason).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.Comment).HasMaxLength(1000);
+            entity.HasIndex(e => e.ReturnNumber).IsUnique();
+            entity.HasIndex(e => e.ReturnDate);
+            entity.HasIndex(e => new { e.BranchId, e.ClientId });
+
+            entity.HasOne(e => e.Branch)
+                .WithMany()
+                .HasForeignKey(e => e.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Sale)
+                .WithMany()
+                .HasForeignKey(e => e.SaleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Client)
+                .WithMany()
+                .HasForeignKey(e => e.ClientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SaleReturnItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.ReturnId, e.RecipeId });
+
+            entity.HasOne(e => e.Return)
+                .WithMany(r => r.Items)
+                .HasForeignKey(e => e.ReturnId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Recipe)
+                .WithMany()
+                .HasForeignKey(e => e.RecipeId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Transfer>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TransferNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.TransferType).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.Comment).HasMaxLength(1000);
+            entity.HasIndex(e => e.TransferNumber).IsUnique();
+            entity.HasIndex(e => e.CreatedDate);
+            entity.HasIndex(e => new { e.SenderBranchId, e.ReceiverBranchId });
+
+            entity.HasOne(e => e.SenderBranch)
+                .WithMany()
+                .HasForeignKey(e => e.SenderBranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ReceiverBranch)
+                .WithMany()
+                .HasForeignKey(e => e.ReceiverBranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.SentByUser)
+                .WithMany()
+                .HasForeignKey(e => e.SentByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ReceivedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ReceivedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<TransferItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ItemType).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.QuantitySent).HasPrecision(18, 4);
+            entity.Property(e => e.QuantityReceived).HasPrecision(18, 4);
+            entity.Property(e => e.Discrepancy).HasPrecision(18, 4);
+            entity.Property(e => e.TransferPriceUsd).HasPrecision(18, 2);
+            entity.HasIndex(e => new { e.TransferId, e.ItemId });
+
+            entity.HasOne(e => e.Transfer)
+                .WithMany(t => t.Items)
+                .HasForeignKey(e => e.TransferId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Ingredient)
+                .WithMany()
+                .HasForeignKey(e => e.ItemId)
+                .HasPrincipalKey(i => i.Id)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
+
+            entity.HasOne(e => e.Recipe)
+                .WithMany()
+                .HasForeignKey(e => e.ItemId)
+                .HasPrincipalKey(r => r.Id)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
         });
     }
 }

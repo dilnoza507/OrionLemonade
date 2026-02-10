@@ -136,9 +136,9 @@ export default function IngredientsPage() {
           </div>
         </div>
       ) : (
-        <div className="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] overflow-hidden">
+        <div className="flex-1 min-h-0 bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] overflow-auto">
           <table className="w-full">
-            <thead>
+            <thead className="sticky top-0 bg-[hsl(var(--card))]">
               <tr className="border-b border-[hsl(var(--border))]">
                 <th className="text-left px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Название</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Категория</th>

@@ -8,6 +8,7 @@ import {
   PackageCheck,
   ArrowLeftRight,
   ShoppingCart,
+  RotateCcw,
   Users,
   Wallet,
   Calculator,
@@ -139,6 +140,9 @@ export default function Sidebar() {
         <MenuLabel>Продажи</MenuLabel>
         <MenuItem to="/sales" icon={ShoppingCart}>
           Продажи
+        </MenuItem>
+        <MenuItem to="/returns" icon={RotateCcw}>
+          Возвраты
         </MenuItem>
         <MenuItem to="/clients" icon={Users}>
           Клиенты
