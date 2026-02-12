@@ -7,6 +7,7 @@ import {
   Package,
   PackageCheck,
   ArrowLeftRight,
+  ClipboardList,
   ShoppingCart,
   RotateCcw,
   Users,
@@ -134,6 +135,7 @@ export default function Sidebar() {
           <SubMenuItem to="/warehouse/materials">Сырьё и материалы</SubMenuItem>
           <SubMenuItem to="/warehouse/products">Готовая продукция</SubMenuItem>
           <SubMenuItem to="/warehouse/transfers">Трансферы</SubMenuItem>
+          <SubMenuItem to="/warehouse/inventory">Инвентаризация</SubMenuItem>
         </MenuGroup>
 
         {/* Продажи */}

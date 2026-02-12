@@ -41,6 +41,14 @@ public class ApplicationDbContext : DbContext
     public DbSet<SaleReturnItem> SaleReturnItems => Set<SaleReturnItem>();
     public DbSet<Transfer> Transfers => Set<Transfer>();
     public DbSet<TransferItem> TransferItems => Set<TransferItem>();
+    public DbSet<Inventory> Inventories => Set<Inventory>();
+    public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
+    public DbSet<Timesheet> Timesheets => Set<Timesheet>();
+    public DbSet<Bonus> Bonuses => Set<Bonus>();
+    public DbSet<Advance> Advances => Set<Advance>();
+    public DbSet<PayrollCalculation> PayrollCalculations => Set<PayrollCalculation>();
+    public DbSet<PayrollItem> PayrollItems => Set<PayrollItem>();
+    public DbSet<EmployeeRateHistory> EmployeeRateHistories => Set<EmployeeRateHistory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -147,7 +155,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.FullName).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Position).HasMaxLength(100);
             entity.Property(e => e.Phone).HasMaxLength(50);
-            entity.Property(e => e.HourlyRate).HasPrecision(18, 2);
+            entity.Property(e => e.DailyRate).HasPrecision(18, 2);
             entity.Property(e => e.MonthlyRate).HasPrecision(18, 2);
             entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
             entity.HasIndex(e => e.FullName);
@@ -686,6 +694,200 @@ public class ApplicationDbContext : DbContext
                 .HasPrincipalKey(r => r.Id)
                 .OnDelete(DeleteBehavior.Restrict)
                 .IsRequired(false);
+        });
+
+        modelBuilder.Entity<Inventory>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.InventoryNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.InventoryType).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.Comment).HasMaxLength(1000);
+            entity.HasIndex(e => e.InventoryNumber).IsUnique();
+            entity.HasIndex(e => e.InventoryDate);
+            entity.HasIndex(e => new { e.BranchId, e.Status });
+
+            entity.HasOne(e => e.Branch)
+                .WithMany()
+                .HasForeignKey(e => e.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.StartedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.StartedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.CompletedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CompletedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<InventoryItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ItemType).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.ExpectedQuantity).HasPrecision(18, 4);
+            entity.Property(e => e.ActualQuantity).HasPrecision(18, 4);
+            entity.Property(e => e.Discrepancy).HasPrecision(18, 4);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.HasIndex(e => new { e.InventoryId, e.ItemId });
+
+            entity.HasOne(e => e.Inventory)
+                .WithMany(i => i.Items)
+                .HasForeignKey(e => e.InventoryId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Ingredient)
+                .WithMany()
+                .HasForeignKey(e => e.ItemId)
+                .HasPrincipalKey(i => i.Id)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
+
+            entity.HasOne(e => e.Recipe)
+                .WithMany()
+                .HasForeignKey(e => e.ItemId)
+                .HasPrincipalKey(r => r.Id)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
+        });
+
+        modelBuilder.Entity<Timesheet>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.HoursWorked).HasPrecision(5, 2);
+            entity.Property(e => e.OvertimeHours).HasPrecision(5, 2);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.HasIndex(e => new { e.EmployeeId, e.WorkDate });
+            entity.HasIndex(e => e.WorkDate);
+
+            entity.HasOne(e => e.Employee)
+                .WithMany()
+                .HasForeignKey(e => e.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Branch)
+                .WithMany()
+                .HasForeignKey(e => e.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Bonus>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BonusType).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.Amount).HasPrecision(18, 2);
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.HasIndex(e => new { e.EmployeeId, e.BonusDate });
+            entity.HasIndex(e => e.BonusDate);
+
+            entity.HasOne(e => e.Employee)
+                .WithMany()
+                .HasForeignKey(e => e.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Advance>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Amount).HasPrecision(18, 2);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.HasIndex(e => new { e.EmployeeId, e.AdvanceDate });
+            entity.HasIndex(e => e.AdvanceDate);
+
+            entity.HasOne(e => e.Employee)
+                .WithMany()
+                .HasForeignKey(e => e.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PayrollCalculation>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.BaseSalary).HasPrecision(18, 2);
+            entity.Property(e => e.DailyPayTotal).HasPrecision(18, 2);
+            entity.Property(e => e.BonusTotal).HasPrecision(18, 2);
+            entity.Property(e => e.PenaltyTotal).HasPrecision(18, 2);
+            entity.Property(e => e.AdvanceTotal).HasPrecision(18, 2);
+            entity.Property(e => e.GrossTotal).HasPrecision(18, 2);
+            entity.Property(e => e.NetTotal).HasPrecision(18, 2);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.HasIndex(e => new { e.EmployeeId, e.Year, e.Month }).IsUnique();
+            entity.HasIndex(e => new { e.BranchId, e.Year, e.Month });
+            entity.HasIndex(e => e.Status);
+
+            entity.HasOne(e => e.Employee)
+                .WithMany()
+                .HasForeignKey(e => e.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Branch)
+                .WithMany()
+                .HasForeignKey(e => e.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.CalculatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CalculatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ApprovedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ApprovedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PayrollItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ItemType).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Quantity).HasPrecision(18, 4);
+            entity.Property(e => e.Rate).HasPrecision(18, 4);
+            entity.Property(e => e.Amount).HasPrecision(18, 2);
+            entity.Property(e => e.ReferenceType).HasMaxLength(50);
+            entity.HasIndex(e => e.PayrollCalculationId);
+
+            entity.HasOne(e => e.PayrollCalculation)
+                .WithMany(p => p.Items)
+                .HasForeignKey(e => e.PayrollCalculationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmployeeRateHistory>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DailyRate).HasPrecision(18, 2);
+            entity.Property(e => e.MonthlyRate).HasPrecision(18, 2);
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.HasIndex(e => new { e.EmployeeId, e.EffectiveDate });
+
+            entity.HasOne(e => e.Employee)
+                .WithMany()
+                .HasForeignKey(e => e.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.SetByUser)
+                .WithMany()
+                .HasForeignKey(e => e.SetByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

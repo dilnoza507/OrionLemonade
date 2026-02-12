@@ -11,6 +11,7 @@ public class RecipeDto
     public string ProductName { get; set; } = string.Empty;
     public decimal OutputVolume { get; set; }
     public BaseUnit OutputUnit { get; set; }
+    public decimal StandardBatchSize { get; set; }
     public RecipeStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
@@ -30,6 +31,7 @@ public class CreateRecipeDto
     public string ProductName { get; set; } = string.Empty;
     public decimal OutputVolume { get; set; }
     public BaseUnit OutputUnit { get; set; }
+    public decimal StandardBatchSize { get; set; } = 1;
 }
 
 public class UpdateRecipeDto
@@ -39,6 +41,7 @@ public class UpdateRecipeDto
     public string ProductName { get; set; } = string.Empty;
     public decimal OutputVolume { get; set; }
     public BaseUnit OutputUnit { get; set; }
+    public decimal StandardBatchSize { get; set; } = 1;
     public RecipeStatus Status { get; set; }
 }
 

@@ -9,7 +9,7 @@ public class EmployeeDto
     public string? Position { get; set; }
     public string? Phone { get; set; }
     public DateOnly? HireDate { get; set; }
-    public decimal? HourlyRate { get; set; }
+    public decimal? DailyRate { get; set; }
     public decimal? MonthlyRate { get; set; }
     public int? BranchId { get; set; }
     public string? BranchName { get; set; }
@@ -24,7 +24,7 @@ public class CreateEmployeeDto
     public string? Position { get; set; }
     public string? Phone { get; set; }
     public DateOnly? HireDate { get; set; }
-    public decimal? HourlyRate { get; set; }
+    public decimal? DailyRate { get; set; }
     public decimal? MonthlyRate { get; set; }
     public int? BranchId { get; set; }
 }
@@ -35,7 +35,7 @@ public class UpdateEmployeeDto
     public string? Position { get; set; }
     public string? Phone { get; set; }
     public DateOnly? HireDate { get; set; }
-    public decimal? HourlyRate { get; set; }
+    public decimal? DailyRate { get; set; }
     public decimal? MonthlyRate { get; set; }
     public int? BranchId { get; set; }
     public EmployeeStatus Status { get; set; }

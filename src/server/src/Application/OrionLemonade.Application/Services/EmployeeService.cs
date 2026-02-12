@@ -64,7 +64,7 @@ public class EmployeeService : IEmployeeService
             Position = dto.Position,
             Phone = dto.Phone,
             HireDate = dto.HireDate,
-            HourlyRate = dto.HourlyRate,
+            DailyRate = dto.DailyRate,
             MonthlyRate = dto.MonthlyRate,
             BranchId = dto.BranchId,
             Status = EmployeeStatus.Active,
@@ -95,7 +95,7 @@ public class EmployeeService : IEmployeeService
         entity.Position = dto.Position;
         entity.Phone = dto.Phone;
         entity.HireDate = dto.HireDate;
-        entity.HourlyRate = dto.HourlyRate;
+        entity.DailyRate = dto.DailyRate;
         entity.MonthlyRate = dto.MonthlyRate;
         entity.BranchId = dto.BranchId;
         entity.Status = dto.Status;
@@ -132,7 +132,7 @@ public class EmployeeService : IEmployeeService
             Position = entity.Position,
             Phone = entity.Phone,
             HireDate = entity.HireDate,
-            HourlyRate = entity.HourlyRate,
+            DailyRate = entity.DailyRate,
             MonthlyRate = entity.MonthlyRate,
             BranchId = entity.BranchId,
             BranchName = entity.Branch?.Name,

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OrionLemonade.Infrastructure.Data;
@@ -11,9 +12,11 @@ using OrionLemonade.Infrastructure.Data;
 namespace OrionLemonade.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260211063934_AddInventoriesPhase11")]
+    partial class AddInventoriesPhase11
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,48 +24,6 @@ namespace OrionLemonade.Infrastructure.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("OrionLemonade.Domain.Entities.Advance", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateOnly>("AdvanceDate")
-                        .HasColumnType("date");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("CreatedByUserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("EmployeeId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AdvanceDate");
-
-                    b.HasIndex("CreatedByUserId");
-
-                    b.HasIndex("EmployeeId", "AdvanceDate");
-
-                    b.ToTable("Advances");
-                });
 
             modelBuilder.Entity("OrionLemonade.Domain.Entities.BatchIngredientConsumption", b =>
                 {
@@ -105,53 +66,6 @@ namespace OrionLemonade.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("BatchIngredientConsumptions");
-                });
-
-            modelBuilder.Entity("OrionLemonade.Domain.Entities.Bonus", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<DateOnly>("BonusDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("BonusType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("CreatedByUserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("EmployeeId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Reason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BonusDate");
-
-                    b.HasIndex("CreatedByUserId");
-
-                    b.HasIndex("EmployeeId", "BonusDate");
-
-                    b.ToTable("Bonuses");
                 });
 
             modelBuilder.Entity("OrionLemonade.Domain.Entities.Branch", b =>
@@ -268,10 +182,6 @@ namespace OrionLemonade.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal?>("DailyRate")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -279,6 +189,10 @@ namespace OrionLemonade.Infrastructure.Migrations
 
                     b.Property<DateOnly?>("HireDate")
                         .HasColumnType("date");
+
+                    b.Property<decimal?>("HourlyRate")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<decimal?>("MonthlyRate")
                         .HasPrecision(18, 2)
@@ -307,50 +221,6 @@ namespace OrionLemonade.Infrastructure.Migrations
                     b.HasIndex("FullName");
 
                     b.ToTable("Employees");
-                });
-
-            modelBuilder.Entity("OrionLemonade.Domain.Entities.EmployeeRateHistory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("DailyRate")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<DateOnly>("EffectiveDate")
-                        .HasColumnType("date");
-
-                    b.Property<int>("EmployeeId")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal?>("MonthlyRate")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<string>("Reason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int?>("SetByUserId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SetByUserId");
-
-                    b.HasIndex("EmployeeId", "EffectiveDate");
-
-                    b.ToTable("EmployeeRateHistories");
                 });
 
             modelBuilder.Entity("OrionLemonade.Domain.Entities.ExchangeRate", b =>
@@ -994,147 +864,6 @@ namespace OrionLemonade.Infrastructure.Migrations
                     b.ToTable("Payments");
                 });
 
-            modelBuilder.Entity("OrionLemonade.Domain.Entities.PayrollCalculation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("AdvanceTotal")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("ApprovedByUserId")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("BaseSalary")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal>("BonusTotal")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<int>("BranchId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("CalculatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("CalculatedByUserId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("DailyPayTotal")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<int>("EmployeeId")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("GrossTotal")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<int>("Month")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("NetTotal")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<DateTime?>("PaidAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("PenaltyTotal")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ApprovedByUserId");
-
-                    b.HasIndex("CalculatedByUserId");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("BranchId", "Year", "Month");
-
-                    b.HasIndex("EmployeeId", "Year", "Month")
-                        .IsUnique();
-
-                    b.ToTable("PayrollCalculations");
-                });
-
-            modelBuilder.Entity("OrionLemonade.Domain.Entities.PayrollItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("ItemType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<int>("PayrollCalculationId")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("Quantity")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
-
-                    b.Property<decimal>("Rate")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("numeric(18,4)");
-
-                    b.Property<int?>("ReferenceId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ReferenceType")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PayrollCalculationId");
-
-                    b.ToTable("PayrollItems");
-                });
-
             modelBuilder.Entity("OrionLemonade.Domain.Entities.PriceList", b =>
                 {
                     b.Property<int>("Id")
@@ -1450,9 +1179,6 @@ namespace OrionLemonade.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
-
-                    b.Property<decimal>("StandardBatchSize")
-                        .HasColumnType("numeric");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1855,57 +1581,6 @@ namespace OrionLemonade.Infrastructure.Migrations
                     b.ToTable("Suppliers");
                 });
 
-            modelBuilder.Entity("OrionLemonade.Domain.Entities.Timesheet", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("BranchId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("CreatedByUserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("EmployeeId")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("HoursWorked")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("numeric(5,2)");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<decimal?>("OvertimeHours")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("numeric(5,2)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateOnly>("WorkDate")
-                        .HasColumnType("date");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BranchId");
-
-                    b.HasIndex("CreatedByUserId");
-
-                    b.HasIndex("WorkDate");
-
-                    b.HasIndex("EmployeeId", "WorkDate");
-
-                    b.ToTable("Timesheets");
-                });
-
             modelBuilder.Entity("OrionLemonade.Domain.Entities.Transfer", b =>
                 {
                     b.Property<int>("Id")
@@ -2106,24 +1781,6 @@ namespace OrionLemonade.Infrastructure.Migrations
                     b.ToTable("UserBranches");
                 });
 
-            modelBuilder.Entity("OrionLemonade.Domain.Entities.Advance", b =>
-                {
-                    b.HasOne("OrionLemonade.Domain.Entities.User", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("OrionLemonade.Domain.Entities.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CreatedByUser");
-
-                    b.Navigation("Employee");
-                });
-
             modelBuilder.Entity("OrionLemonade.Domain.Entities.BatchIngredientConsumption", b =>
                 {
                     b.HasOne("OrionLemonade.Domain.Entities.Ingredient", "Ingredient")
@@ -2143,24 +1800,6 @@ namespace OrionLemonade.Infrastructure.Migrations
                     b.Navigation("ProductionBatch");
                 });
 
-            modelBuilder.Entity("OrionLemonade.Domain.Entities.Bonus", b =>
-                {
-                    b.HasOne("OrionLemonade.Domain.Entities.User", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("OrionLemonade.Domain.Entities.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CreatedByUser");
-
-                    b.Navigation("Employee");
-                });
-
             modelBuilder.Entity("OrionLemonade.Domain.Entities.Employee", b =>
                 {
                     b.HasOne("OrionLemonade.Domain.Entities.Branch", "Branch")
@@ -2169,24 +1808,6 @@ namespace OrionLemonade.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Branch");
-                });
-
-            modelBuilder.Entity("OrionLemonade.Domain.Entities.EmployeeRateHistory", b =>
-                {
-                    b.HasOne("OrionLemonade.Domain.Entities.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("OrionLemonade.Domain.Entities.User", "SetByUser")
-                        .WithMany()
-                        .HasForeignKey("SetByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Employee");
-
-                    b.Navigation("SetByUser");
                 });
 
             modelBuilder.Entity("OrionLemonade.Domain.Entities.ExchangeRate", b =>
@@ -2394,50 +2015,6 @@ namespace OrionLemonade.Infrastructure.Migrations
                     b.Navigation("CreatedByUser");
 
                     b.Navigation("Sale");
-                });
-
-            modelBuilder.Entity("OrionLemonade.Domain.Entities.PayrollCalculation", b =>
-                {
-                    b.HasOne("OrionLemonade.Domain.Entities.User", "ApprovedByUser")
-                        .WithMany()
-                        .HasForeignKey("ApprovedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("OrionLemonade.Domain.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("OrionLemonade.Domain.Entities.User", "CalculatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CalculatedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("OrionLemonade.Domain.Entities.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ApprovedByUser");
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("CalculatedByUser");
-
-                    b.Navigation("Employee");
-                });
-
-            modelBuilder.Entity("OrionLemonade.Domain.Entities.PayrollItem", b =>
-                {
-                    b.HasOne("OrionLemonade.Domain.Entities.PayrollCalculation", "PayrollCalculation")
-                        .WithMany("Items")
-                        .HasForeignKey("PayrollCalculationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PayrollCalculation");
                 });
 
             modelBuilder.Entity("OrionLemonade.Domain.Entities.PriceList", b =>
@@ -2716,32 +2293,6 @@ namespace OrionLemonade.Infrastructure.Migrations
                     b.Navigation("Return");
                 });
 
-            modelBuilder.Entity("OrionLemonade.Domain.Entities.Timesheet", b =>
-                {
-                    b.HasOne("OrionLemonade.Domain.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("OrionLemonade.Domain.Entities.User", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("OrionLemonade.Domain.Entities.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("CreatedByUser");
-
-                    b.Navigation("Employee");
-                });
-
             modelBuilder.Entity("OrionLemonade.Domain.Entities.Transfer", b =>
                 {
                     b.HasOne("OrionLemonade.Domain.Entities.User", "ReceivedByUser")
@@ -2825,11 +2376,6 @@ namespace OrionLemonade.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("OrionLemonade.Domain.Entities.Inventory", b =>
-                {
-                    b.Navigation("Items");
-                });
-
-            modelBuilder.Entity("OrionLemonade.Domain.Entities.PayrollCalculation", b =>
                 {
                     b.Navigation("Items");
                 });

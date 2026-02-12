@@ -13,6 +13,7 @@ import MaterialsPage from './pages/MaterialsPage';
 import ProductsPage from './pages/ProductsPage';
 import ProductStockPage from './pages/ProductStockPage';
 import TransfersPage from './pages/TransfersPage';
+import InventoryPage from './pages/InventoryPage';
 import SalesPage from './pages/SalesPage';
 import SaleReturnsPage from './pages/SaleReturnsPage';
 import ClientsPage from './pages/ClientsPage';
@@ -68,6 +69,7 @@ function App() {
           <Route path="/warehouse/materials" element={<MaterialsPage />} />
           <Route path="/warehouse/products" element={<ProductStockPage />} />
           <Route path="/warehouse/transfers" element={<TransfersPage />} />
+          <Route path="/warehouse/inventory" element={<InventoryPage />} />
 
           {/* Sales */}
           <Route path="/sales" element={<SalesPage />} />

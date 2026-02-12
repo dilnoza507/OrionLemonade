@@ -77,6 +77,7 @@ public class RecipeService : IRecipeService
             ProductName = dto.ProductName,
             OutputVolume = dto.OutputVolume,
             OutputUnit = dto.OutputUnit,
+            StandardBatchSize = dto.StandardBatchSize,
             Status = RecipeStatus.Draft,
             CreatedAt = DateTime.UtcNow
         };
@@ -97,6 +98,7 @@ public class RecipeService : IRecipeService
         entity.ProductName = dto.ProductName;
         entity.OutputVolume = dto.OutputVolume;
         entity.OutputUnit = dto.OutputUnit;
+        entity.StandardBatchSize = dto.StandardBatchSize;
         entity.Status = dto.Status;
         entity.UpdatedAt = DateTime.UtcNow;
 
@@ -309,6 +311,7 @@ public class RecipeService : IRecipeService
             ProductName = entity.ProductName,
             OutputVolume = entity.OutputVolume,
             OutputUnit = entity.OutputUnit,
+            StandardBatchSize = entity.StandardBatchSize,
             Status = entity.Status,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
@@ -329,6 +332,7 @@ public class RecipeService : IRecipeService
             ProductName = entity.ProductName,
             OutputVolume = entity.OutputVolume,
             OutputUnit = entity.OutputUnit,
+            StandardBatchSize = entity.StandardBatchSize,
             Status = entity.Status,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,

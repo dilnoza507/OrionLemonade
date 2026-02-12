@@ -68,13 +68,6 @@ export default function EmployeesPage() {
     ? employees
     : employees.filter(e => e.status === filter);
 
-  const stats = {
-    total: employees.length,
-    active: employees.filter(e => e.status === 'Active').length,
-    onLeave: employees.filter(e => e.status === 'OnLeave').length,
-    dismissed: employees.filter(e => e.status === 'Dismissed').length,
-  };
-
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-6">
@@ -85,26 +78,6 @@ export default function EmployeesPage() {
         <button onClick={handleAdd} className="flex items-center gap-2 px-4 py-2 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] rounded-lg hover:opacity-90 transition-opacity font-medium">
           <Plus className="w-4 h-4" />Добавить
         </button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] p-4">
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">Всего</p>
-          <p className="text-2xl font-bold text-[hsl(var(--foreground))]">{stats.total}</p>
-        </div>
-        <div className="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] p-4">
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">Работают</p>
-          <p className="text-2xl font-bold text-[hsl(var(--success))]">{stats.active}</p>
-        </div>
-        <div className="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] p-4">
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">В отпуске</p>
-          <p className="text-2xl font-bold text-[hsl(var(--warning))]">{stats.onLeave}</p>
-        </div>
-        <div className="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] p-4">
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">Уволены</p>
-          <p className="text-2xl font-bold text-[hsl(var(--muted-foreground))]">{stats.dismissed}</p>
-        </div>
       </div>
 
       {/* Filter tabs */}
@@ -144,11 +117,13 @@ export default function EmployeesPage() {
           <table className="w-full">
             <thead className="sticky top-0 bg-[hsl(var(--card))]">
               <tr className="border-b border-[hsl(var(--border))]">
+                <th className="text-center px-2 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] w-10">#</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">ФИО</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Должность</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Филиал</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Телефон</th>
-                <th className="text-right px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Ставка</th>
+                <th className="text-right px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Ставка/день</th>
+                <th className="text-right px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Оклад/мес</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Статус</th>
                 <th className="text-right px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Действия</th>
               </tr>
@@ -159,6 +134,9 @@ export default function EmployeesPage() {
                 const StatusIcon = status.icon;
                 return (
                   <tr key={employee.id} className={index !== filteredEmployees.length - 1 ? 'border-b border-[hsl(var(--border))]' : ''}>
+                    <td className="px-2 py-3 text-center">
+                      <span className="text-sm text-[hsl(var(--muted-foreground))]">{index + 1}</span>
+                    </td>
                     <td className="px-4 py-3">
                       <span className="text-sm font-medium text-[hsl(var(--foreground))]">{employee.fullName}</span>
                     </td>
@@ -172,13 +150,10 @@ export default function EmployeesPage() {
                       <span className="text-sm text-[hsl(var(--muted-foreground))]">{employee.phone || '-'}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {employee.monthlyRate ? (
-                        <span className="text-sm text-[hsl(var(--foreground))]">{employee.monthlyRate.toLocaleString()} /мес</span>
-                      ) : employee.hourlyRate ? (
-                        <span className="text-sm text-[hsl(var(--foreground))]">{employee.hourlyRate.toLocaleString()} /час</span>
-                      ) : (
-                        <span className="text-sm text-[hsl(var(--muted-foreground))]">-</span>
-                      )}
+                      <span className="text-sm font-medium text-[hsl(var(--foreground))]">{employee.dailyRate ? employee.dailyRate.toLocaleString() : '-'}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="text-sm text-[hsl(var(--muted-foreground))]">{employee.monthlyRate ? employee.monthlyRate.toLocaleString() : '-'}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium bg-[hsl(var(--${status.color}))]/10 text-[hsl(var(--${status.color}))]`}>
@@ -215,7 +190,7 @@ function EmployeeModal({ employee, branches, onSave, onClose }) {
     position: employee?.position || '',
     phone: employee?.phone || '',
     hireDate: employee?.hireDate || '',
-    hourlyRate: employee?.hourlyRate || '',
+    dailyRate: employee?.dailyRate || '',
     monthlyRate: employee?.monthlyRate || '',
     branchId: employee?.branchId || '',
     status: employee?.status || 'Active',
@@ -228,7 +203,7 @@ function EmployeeModal({ employee, branches, onSave, onClose }) {
       position: formData.position || null,
       phone: formData.phone || null,
       hireDate: formData.hireDate || null,
-      hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : null,
+      dailyRate: formData.dailyRate ? parseFloat(formData.dailyRate) : null,
       monthlyRate: formData.monthlyRate ? parseFloat(formData.monthlyRate) : null,
       branchId: formData.branchId ? parseInt(formData.branchId) : null,
       status: formData.status,
@@ -276,12 +251,16 @@ function EmployeeModal({ employee, branches, onSave, onClose }) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Ставка в час (TJS)</label>
-              <input type="number" step="0.01" min="0" value={formData.hourlyRate} onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })} className={inputClass} placeholder="25.00" />
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Ставка в день (TJS)</label>
+              <input type="number" step="0.01" min="0" value={formData.dailyRate} onChange={(e) => {
+                const daily = e.target.value;
+                const monthly = daily ? (parseFloat(daily) * 30).toFixed(2) : '';
+                setFormData({ ...formData, dailyRate: daily, monthlyRate: monthly });
+              }} className={inputClass} placeholder="100.00" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Оклад в месяц (TJS)</label>
-              <input type="number" step="0.01" min="0" value={formData.monthlyRate} onChange={(e) => setFormData({ ...formData, monthlyRate: e.target.value })} className={inputClass} placeholder="3000.00" />
+              <input type="number" step="0.01" min="0" value={formData.monthlyRate} readOnly className={inputClass + " bg-[hsl(var(--muted))]/50 cursor-not-allowed"} placeholder="3000.00" />
             </div>
           </div>
           {employee && (

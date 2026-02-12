@@ -350,8 +350,12 @@ public class ProductionService : IProductionService
         if (recipeVersion?.Recipe is null)
             return new List<BatchIngredientConsumptionInputDto>();
 
-        // Calculate ratio based on recipe output
-        var ratio = plannedQuantity / recipeVersion.Recipe.OutputVolume;
+        // Calculate ratio based on standard batch size
+        // Recipe ingredients are defined for StandardBatchSize, so we calculate the multiplier
+        var standardBatchSize = recipeVersion.Recipe.StandardBatchSize > 0
+            ? recipeVersion.Recipe.StandardBatchSize
+            : 1;
+        var ratio = plannedQuantity / standardBatchSize;
 
         var result = new List<BatchIngredientConsumptionInputDto>();
 

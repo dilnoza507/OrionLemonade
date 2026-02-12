@@ -19,7 +19,16 @@
       "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\createdb.exe\" -U postgres -h localhost orion_lemonade)",
       "Bash(powershell -Command \"$env:PGPASSWORD=''postgres''; & ''C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\createdb.exe'' -U postgres -h localhost -w orion_lemonade\")",
       "Bash(cmd /c \"set PGPASSWORD=postgres && \"\"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\createdb.exe\"\" -U postgres -h localhost -w orion_lemonade\")",
-      "Bash(dotnet add:*)"
+      "Bash(dotnet add:*)",
+      "Bash(powershell -Command \"Start-Sleep -Seconds 5\")",
+      "Bash(curl:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 39012 -Force\")",
+      "Bash(powershell -Command:*)",
+      "Bash(taskkill:*)",
+      "Bash(tasklist:*)",
+      "Bash(cmd.exe /c \"taskkill /F /PID 50460\")",
+      "Bash(wmic process where \"ProcessId=50460\" delete)",
+      "Bash(PGPASSWORD=lemonade123 psql:*)"
     ]
   }
 }

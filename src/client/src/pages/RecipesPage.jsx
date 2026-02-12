@@ -292,6 +292,9 @@ export default function RecipesPage() {
                       <p className="text-lg font-medium text-[hsl(var(--foreground))]">
                         {recipeDetail.outputVolume} {BASE_UNITS[recipeDetail.outputUnit] || recipeDetail.outputUnit}
                       </p>
+                      <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
+                        Партия: {recipeDetail.standardBatchSize || 1} шт
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -402,6 +405,7 @@ function RecipeModal({ recipe, onSave, onClose }) {
     productName: recipe?.productName || '',
     outputVolume: recipe?.outputVolume || 1,
     outputUnit: recipe?.outputUnit || 'L',
+    standardBatchSize: recipe?.standardBatchSize || 1,
     status: recipe?.status || 'Draft',
   });
 
@@ -410,6 +414,7 @@ function RecipeModal({ recipe, onSave, onClose }) {
     onSave({
       ...formData,
       outputVolume: parseFloat(formData.outputVolume),
+      standardBatchSize: parseFloat(formData.standardBatchSize),
       description: formData.description || null,
     });
   }
@@ -436,10 +441,10 @@ function RecipeModal({ recipe, onSave, onClose }) {
             <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Описание</label>
             <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className={inputClass} rows={3} placeholder="Описание рецепта..." />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Выход *</label>
-              <input type="number" step="0.01" min="0.01" required value={formData.outputVolume} onChange={(e) => setFormData({ ...formData, outputVolume: e.target.value })} className={inputClass} placeholder="10" />
+              <input type="number" step="0.01" min="0.01" required value={formData.outputVolume} onChange={(e) => setFormData({ ...formData, outputVolume: e.target.value })} className={inputClass} placeholder="1" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Ед. измерения *</label>
@@ -448,6 +453,10 @@ function RecipeModal({ recipe, onSave, onClose }) {
                   <option key={key} value={key}>{label}</option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Размер партии *</label>
+              <input type="number" step="1" min="1" required value={formData.standardBatchSize} onChange={(e) => setFormData({ ...formData, standardBatchSize: e.target.value })} className={inputClass} placeholder="1200" title="Кол-во продукции, на которое рассчитана рецептура" />
             </div>
           </div>
           {recipe && (
