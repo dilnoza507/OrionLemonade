@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Droplets,
+  GlassWater,
   BookOpen,
   Factory,
   Package,
@@ -104,7 +104,7 @@ export default function Sidebar() {
       <div className="p-4 border-b border-[hsl(var(--border))]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[hsl(var(--primary))] flex items-center justify-center">
-            <Droplets className="w-5 h-5 text-[hsl(var(--primary-foreground))]" />
+            <GlassWater className="w-5 h-5 text-[hsl(var(--primary-foreground))]" />
           </div>
           <div>
             <h1 className="font-semibold text-[hsl(var(--foreground))]">Лимонад</h1>
@@ -117,7 +117,7 @@ export default function Sidebar() {
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
         {/* Основное */}
         <MenuItem to="/dashboard" icon={LayoutDashboard}>
-          Дашборд
+          Главная
         </MenuItem>
 
         {/* Производство */}
@@ -132,7 +132,8 @@ export default function Sidebar() {
         {/* Склад */}
         <MenuLabel>Склад</MenuLabel>
         <MenuGroup icon={Package} label="Склад" defaultOpen>
-          <SubMenuItem to="/warehouse/materials">Сырьё и материалы</SubMenuItem>
+          <SubMenuItem to="/settings/ingredients">Сырьё и материалы</SubMenuItem>
+          <SubMenuItem to="/warehouse/materials">Остатки</SubMenuItem>
           <SubMenuItem to="/warehouse/products">Готовая продукция</SubMenuItem>
           <SubMenuItem to="/warehouse/transfers">Трансферы</SubMenuItem>
           <SubMenuItem to="/warehouse/inventory">Инвентаризация</SubMenuItem>
@@ -158,6 +159,9 @@ export default function Sidebar() {
         <MenuItem to="/payroll" icon={Calculator}>
           Зарплата
         </MenuItem>
+        <MenuItem to="/settings/exchange-rates" icon={DollarSign}>
+          Курсы валют
+        </MenuItem>
 
         {/* Отчёты */}
         <MenuLabel>Аналитика</MenuLabel>
@@ -171,9 +175,6 @@ export default function Sidebar() {
           <SubMenuItem to="/settings/branches">Филиалы</SubMenuItem>
           <SubMenuItem to="/settings/employees">Сотрудники</SubMenuItem>
           <SubMenuItem to="/settings/users">Пользователи</SubMenuItem>
-          <SubMenuItem to="/settings/exchange-rates">Курсы валют</SubMenuItem>
-          <SubMenuItem to="/settings/ingredients">Ингредиенты</SubMenuItem>
-          <SubMenuItem to="/settings/expense-categories">Категории расходов</SubMenuItem>
           <SubMenuItem to="/settings/suppliers">Поставщики</SubMenuItem>
         </MenuGroup>
       </nav>

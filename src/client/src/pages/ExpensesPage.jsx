@@ -266,24 +266,20 @@ export default function ExpensesPage() {
                   </td>
                   <td className="p-3 text-right">
                     <div className="flex justify-end gap-1">
-                      {expense.sourceName === 'Manual' && (
-                        <>
-                          <button
-                            onClick={() => handleEdit(expense)}
-                            className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
-                            title="Редактировать"
-                          >
-                            <Edit2 className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(expense.id)}
-                            className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
-                            title="Удалить"
-                          >
-                            <Trash2 className="w-4 h-4 text-[hsl(var(--destructive))]" />
-                          </button>
-                        </>
-                      )}
+                      <button
+                        onClick={() => handleEdit(expense)}
+                        className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+                        title="Редактировать"
+                      >
+                        <Edit2 className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(expense.id)}
+                        className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+                        title="Удалить"
+                      >
+                        <Trash2 className="w-4 h-4 text-[hsl(var(--destructive))]" />
+                      </button>
                     </div>
                   </td>
                 </tr>
