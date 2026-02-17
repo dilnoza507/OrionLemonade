@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Package, Plus, Pencil, Trash2, X, Archive, CheckCircle } from 'lucide-react';
 import { getIngredients, createIngredient, updateIngredient, deleteIngredient } from '../../api/ingredients';
+import { createReceipt } from '../../api/warehouse';
+import { getBranches } from '../../api/branches';
 
 const CATEGORIES = {
   Raw: { label: 'Сырьё', color: 'primary' },
@@ -21,22 +23,27 @@ const STATUSES = {
 
 export default function IngredientsPage() {
   const [ingredients, setIngredients] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState(null);
   const [filter, setFilter] = useState('all');
 
-  useEffect(() => { loadIngredients(); }, []);
+  useEffect(() => { loadData(); }, []);
 
-  async function loadIngredients() {
+  async function loadData() {
     try {
       setLoading(true);
-      const data = await getIngredients();
-      setIngredients(data);
+      const [ingredientsData, branchesData] = await Promise.all([
+        getIngredients(),
+        getBranches()
+      ]);
+      setIngredients(ingredientsData);
+      setBranches(branchesData.filter(b => b.status === 'Active'));
       setError(null);
     } catch (err) {
-      setError('Не удалось загрузить ингредиенты');
+      setError('Не удалось загрузить данные');
     } finally {
       setLoading(false);
     }
@@ -47,16 +54,30 @@ export default function IngredientsPage() {
 
   async function handleDelete(id) {
     if (!confirm('Удалить ингредиент?')) return;
-    try { await deleteIngredient(id); await loadIngredients(); }
+    try { await deleteIngredient(id); await loadData(); }
     catch (err) { setError('Не удалось удалить ингредиент'); }
   }
 
-  async function handleSave(data) {
+  async function handleSave(data, initialStock) {
     try {
-      if (editingIngredient) { await updateIngredient(editingIngredient.id, data); }
-      else { await createIngredient(data); }
+      if (editingIngredient) {
+        await updateIngredient(editingIngredient.id, data);
+      } else {
+        const newIngredient = await createIngredient(data);
+        // If initial stock is provided, create a receipt
+        if (initialStock && initialStock.quantity > 0 && initialStock.branchId) {
+          await createReceipt({
+            branchId: parseInt(initialStock.branchId),
+            ingredientId: newIngredient.id,
+            quantity: parseFloat(initialStock.quantity),
+            unit: data.baseUnit,
+            receiptDate: new Date().toISOString(),
+            note: 'Начальный остаток'
+          });
+        }
+      }
       setIsModalOpen(false);
-      await loadIngredients();
+      await loadData();
     } catch (err) { setError('Не удалось сохранить ингредиент'); }
   }
 
@@ -205,12 +226,12 @@ export default function IngredientsPage() {
         </div>
       )}
 
-      {isModalOpen && (<IngredientModal ingredient={editingIngredient} onSave={handleSave} onClose={() => setIsModalOpen(false)} />)}
+      {isModalOpen && (<IngredientModal ingredient={editingIngredient} branches={branches} onSave={handleSave} onClose={() => setIsModalOpen(false)} />)}
     </div>
   );
 }
 
-function IngredientModal({ ingredient, onSave, onClose }) {
+function IngredientModal({ ingredient, branches, onSave, onClose }) {
   const [formData, setFormData] = useState({
     name: ingredient?.name || '',
     category: ingredient?.category || 'Raw',
@@ -223,16 +244,22 @@ function IngredientModal({ ingredient, onSave, onClose }) {
     status: ingredient?.status || 'Active',
   });
 
+  const [initialStock, setInitialStock] = useState({
+    quantity: '',
+    branchId: branches?.length > 0 ? branches[0].id.toString() : '',
+  });
+
   function handleSubmit(e) {
     e.preventDefault();
-    onSave({
+    const data = {
       ...formData,
       minStock: formData.minStock ? parseFloat(formData.minStock) : null,
       shelfLifeDays: formData.shelfLifeDays ? parseInt(formData.shelfLifeDays) : null,
       conversionRate: parseFloat(formData.conversionRate),
       subcategory: formData.subcategory || null,
       purchaseUnit: formData.purchaseUnit || null,
-    });
+    };
+    onSave(data, !ingredient ? initialStock : null);
   }
 
   const inputClass = "w-full px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]";
@@ -304,6 +331,26 @@ function IngredientModal({ ingredient, onSave, onClose }) {
               </div>
             )}
           </div>
+          {/* Initial stock - only for new ingredients */}
+          {!ingredient && branches?.length > 0 && (
+            <div className="border-t border-[hsl(var(--border))] pt-4 mt-4">
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-3">Начальный остаток (необязательно)</label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-[hsl(var(--muted-foreground))] mb-1">Филиал</label>
+                  <select value={initialStock.branchId} onChange={(e) => setInitialStock({ ...initialStock, branchId: e.target.value })} className={inputClass}>
+                    {branches.map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-[hsl(var(--muted-foreground))] mb-1">Количество ({BASE_UNITS[formData.baseUnit]})</label>
+                  <input type="number" step="0.01" min="0" value={initialStock.quantity} onChange={(e) => setInitialStock({ ...initialStock, quantity: e.target.value })} className={inputClass} placeholder="0" />
+                </div>
+              </div>
+            </div>
+          )}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2 text-[hsl(var(--foreground))] bg-[hsl(var(--muted))] rounded-lg hover:bg-[hsl(var(--muted))]/80 transition-colors font-medium">Отмена</button>
             <button type="submit" className="flex-1 px-4 py-2 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] rounded-lg hover:opacity-90 transition-opacity font-medium">{ingredient ? 'Сохранить' : 'Создать'}</button>

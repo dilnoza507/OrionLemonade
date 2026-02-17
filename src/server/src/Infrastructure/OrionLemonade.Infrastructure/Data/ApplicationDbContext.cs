@@ -49,6 +49,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<PayrollCalculation> PayrollCalculations => Set<PayrollCalculation>();
     public DbSet<PayrollItem> PayrollItems => Set<PayrollItem>();
     public DbSet<EmployeeRateHistory> EmployeeRateHistories => Set<EmployeeRateHistory>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -887,6 +888,27 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(e => e.SetByUser)
                 .WithMany()
                 .HasForeignKey(e => e.SetByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Type).HasConversion<string>().HasMaxLength(30);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Message).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.RelatedEntityType).HasMaxLength(50);
+            entity.HasIndex(e => new { e.UserId, e.IsRead });
+            entity.HasIndex(e => e.CreatedAt);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Branch)
+                .WithMany()
+                .HasForeignKey(e => e.BranchId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
     }
