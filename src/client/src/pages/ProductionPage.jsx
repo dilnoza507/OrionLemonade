@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Factory, Plus, Play, CheckCircle, XCircle, Clock, Trash2, X, Eye } from 'lucide-react';
-import { getBatches, createBatch, deleteBatch, startBatch, completeBatch, cancelBatch, getProductionSummary, getBatchDetail } from '../api/production';
+import { getBatches, createBatch, deleteBatch, startBatch, completeBatch, cancelBatch, getProductionSummary, getBatchDetail, calculateConsumption } from '../api/production';
 import { getRecipes, getRecipeDetail } from '../api/recipes';
 import { getBranches } from '../api/branches';
 
@@ -338,11 +338,13 @@ function CreateBatchModal({ recipes, branches, onClose, onSave }) {
     recipeVersionId: '',
     branchId: '',
     plannedQuantity: '',
+    actualQuantity: '',
     outputUnit: 'L',
     plannedDate: new Date().toISOString().split('T')[0],
     notes: ''
   });
   const [recipeDetail, setRecipeDetail] = useState(null);
+  const [ingredientConsumptions, setIngredientConsumptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -351,9 +353,16 @@ function CreateBatchModal({ recipes, branches, onClose, onSave }) {
       loadRecipeDetail(form.recipeId);
     } else {
       setRecipeDetail(null);
+      setIngredientConsumptions([]);
       setForm(f => ({ ...f, recipeVersionId: '', outputUnit: 'L' }));
     }
   }, [form.recipeId]);
+
+  useEffect(() => {
+    if (form.recipeVersionId && form.plannedQuantity) {
+      loadConsumptions();
+    }
+  }, [form.recipeVersionId, form.plannedQuantity]);
 
   async function loadRecipeDetail(recipeId) {
     try {
@@ -371,15 +380,37 @@ function CreateBatchModal({ recipes, branches, onClose, onSave }) {
     }
   }
 
+  async function loadConsumptions() {
+    try {
+      const data = await calculateConsumption(parseInt(form.recipeVersionId), parseFloat(form.plannedQuantity));
+      setIngredientConsumptions(data.map(c => ({
+        ingredientId: c.ingredientId,
+        ingredientName: c.ingredientName,
+        plannedQuantity: c.quantity,
+        actualQuantity: c.quantity.toString(),
+        unit: c.unit
+      })));
+    } catch (err) {
+      console.error('Failed to calculate consumption:', err);
+    }
+  }
+
+  function updateConsumption(ingredientId, value) {
+    setIngredientConsumptions(prev => prev.map(c =>
+      c.ingredientId === ingredientId ? { ...c, actualQuantity: value } : c
+    ));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.branchId || !form.recipeId || !form.recipeVersionId || !form.plannedQuantity) {
+    if (!form.branchId || !form.recipeId || !form.recipeVersionId || !form.plannedQuantity || !form.actualQuantity) {
       setError('Заполните обязательные поля');
       return;
     }
     setLoading(true);
     try {
-      await createBatch({
+      // 1. Create batch
+      const batch = await createBatch({
         recipeId: parseInt(form.recipeId),
         recipeVersionId: parseInt(form.recipeVersionId),
         branchId: parseInt(form.branchId),
@@ -388,6 +419,21 @@ function CreateBatchModal({ recipes, branches, onClose, onSave }) {
         plannedDate: new Date(form.plannedDate).toISOString(),
         notes: form.notes || null
       });
+
+      // 2. Start batch
+      await startBatch(batch.id, { ingredientConsumptions: [] });
+
+      // 3. Complete batch
+      await completeBatch(batch.id, {
+        actualQuantity: parseFloat(form.actualQuantity),
+        ingredientConsumptions: ingredientConsumptions.map(c => ({
+          ingredientId: c.ingredientId,
+          plannedQuantity: c.plannedQuantity,
+          actualQuantity: parseFloat(c.actualQuantity),
+          unit: c.unit
+        }))
+      });
+
       onSave();
     } catch (err) {
       setError(err.message);
@@ -402,7 +448,7 @@ function CreateBatchModal({ recipes, branches, onClose, onSave }) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-[hsl(var(--card))] rounded-xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Новая производственная партия</h2>
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Создать партию</h2>
           <button onClick={onClose} className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
             <X className="w-6 h-6" />
           </button>
@@ -448,10 +494,14 @@ function CreateBatchModal({ recipes, branches, onClose, onSave }) {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-[hsl(var(--muted-foreground))] text-sm mb-1">Плановое количество *</label>
-              <input type="number" step="0.01" min="0.01" value={form.plannedQuantity} onChange={e => setForm({ ...form, plannedQuantity: e.target.value })} className={inputClass} placeholder="100" />
+              <label className="block text-[hsl(var(--muted-foreground))] text-sm mb-1">План *</label>
+              <input type="number" step="0.01" min="0.01" value={form.plannedQuantity} onChange={e => setForm({ ...form, plannedQuantity: e.target.value, actualQuantity: e.target.value })} className={inputClass} placeholder="100" />
+            </div>
+            <div>
+              <label className="block text-[hsl(var(--muted-foreground))] text-sm mb-1">Факт *</label>
+              <input type="number" step="0.01" min="0.01" value={form.actualQuantity} onChange={e => setForm({ ...form, actualQuantity: e.target.value })} className={inputClass} placeholder="100" />
             </div>
             <div>
               <label className="block text-[hsl(var(--muted-foreground))] text-sm mb-1">Ед. изм.</label>
@@ -471,6 +521,32 @@ function CreateBatchModal({ recipes, branches, onClose, onSave }) {
             </div>
           )}
 
+          {ingredientConsumptions.length > 0 && (
+            <div>
+              <p className="text-sm text-[hsl(var(--muted-foreground))] mb-2">Расход ингредиентов</p>
+              <div className="space-y-2">
+                {ingredientConsumptions.map(c => (
+                  <div key={c.ingredientId} className="flex items-center gap-4 bg-[hsl(var(--muted))]/30 rounded-lg p-3">
+                    <div className="flex-1">
+                      <p className="text-sm text-[hsl(var(--foreground))]">{c.ingredientName}</p>
+                      <p className="text-xs text-[hsl(var(--muted-foreground))]">План: {c.plannedQuantity} {unitLabels[c.unit]}</p>
+                    </div>
+                    <div className="w-28">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={c.actualQuantity}
+                        onChange={e => updateConsumption(c.ingredientId, e.target.value)}
+                        className={`${inputClass} text-right text-sm`}
+                      />
+                    </div>
+                    <span className="text-sm text-[hsl(var(--muted-foreground))] w-8">{unitLabels[c.unit]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-[hsl(var(--muted-foreground))] text-sm mb-1">Примечание</label>
             <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className={inputClass} rows={2} />
@@ -478,8 +554,8 @@ function CreateBatchModal({ recipes, branches, onClose, onSave }) {
 
           <div className="flex justify-end gap-3 pt-4">
             <button type="button" onClick={onClose} className="px-4 py-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">Отмена</button>
-            <button type="submit" disabled={loading} className="px-6 py-2 bg-[hsl(var(--primary))] hover:opacity-90 text-[hsl(var(--primary-foreground))] rounded-lg font-medium disabled:opacity-50">
-              {loading ? 'Создание...' : 'Создать партию'}
+            <button type="submit" disabled={loading} className="px-6 py-2 bg-[hsl(var(--success))] hover:opacity-90 text-white rounded-lg font-medium disabled:opacity-50">
+              {loading ? 'Создание...' : 'Создать и завершить'}
             </button>
           </div>
         </form>

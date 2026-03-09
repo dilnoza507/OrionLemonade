@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, LogOut, AlertTriangle, Package, Factory, ShoppingCart, CreditCard, Info } from 'lucide-react';
+import { Bell, LogOut, AlertTriangle, Package, Factory, ShoppingCart, CreditCard, Info, Menu } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth';
 import { getNotifications, markAsRead, markAllAsRead } from '../../api/notifications';
 
@@ -13,7 +13,7 @@ const NOTIFICATION_TYPES = {
   System: { icon: Info, color: 'muted-foreground' },
 };
 
-export default function Header() {
+export default function Header({ onMenuToggle }) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -101,8 +101,20 @@ export default function Header() {
   };
 
   return (
-    <header className="h-16 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] px-6 flex items-center justify-end">
-      <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-20 h-14 lg:h-16 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] px-4 lg:px-6 flex items-center justify-between shrink-0">
+      {/* Left side — hamburger (mobile only) */}
+      <button
+        onClick={onMenuToggle}
+        className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors"
+      >
+        <Menu className="w-5 h-5 text-[hsl(var(--foreground))]" />
+      </button>
+
+      {/* Spacer for desktop (pushes right side content) */}
+      <div className="hidden lg:block" />
+
+      {/* Right side */}
+      <div className="flex items-center gap-3 lg:gap-4">
         {/* Notifications */}
         <div className="relative" ref={dropdownRef}>
           <button
@@ -181,8 +193,8 @@ export default function Header() {
         </div>
 
         {/* User menu */}
-        <div className="flex items-center gap-3 pl-4 border-l border-[hsl(var(--border))]">
-          <div className="text-right">
+        <div className="flex items-center gap-3 pl-3 lg:pl-4 border-l border-[hsl(var(--border))]">
+          <div className="text-right hidden sm:block">
             <p className="text-sm font-medium text-[hsl(var(--foreground))]">
               {user?.name || 'Пользователь'}
             </p>

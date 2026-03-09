@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrionLemonade.API.Authorization;
 using OrionLemonade.Application.DTOs;
 using OrionLemonade.Application.Interfaces;
 using OrionLemonade.Domain.Enums;
@@ -9,7 +10,7 @@ namespace OrionLemonade.API.Controllers;
 
 [ApiController]
 [Route("api/transfers")]
-[Authorize]
+[Authorize(Roles = Roles.AllRoles)]
 public class TransfersController : ControllerBase
 {
     private readonly ITransferService _transferService;

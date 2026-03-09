@@ -1,32 +1,41 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   GlassWater,
   BookOpen,
   Factory,
   Package,
-  PackageCheck,
-  ArrowLeftRight,
-  ClipboardList,
-  ShoppingCart,
   RotateCcw,
   Users,
   Wallet,
   Calculator,
   BarChart3,
-  Building2,
   UserCog,
   Settings,
   DollarSign,
   ChevronDown,
+  ShoppingCart,
+  Truck,
+  ClipboardList,
+  ScrollText,
+  X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuthStore } from '../../stores/auth';
+import { canAccessMenu } from '../../config/permissions';
 
-// Menu item component
-function MenuItem({ to, icon: Icon, children }) {
+// Menu item component with permission check
+function MenuItem({ to, icon: Icon, children, menuKey, onNavigate }) {
+  const userRole = useAuthStore((state) => state.user?.role);
+
+  if (menuKey && !canAccessMenu(userRole, menuKey)) {
+    return null;
+  }
+
   return (
     <NavLink
       to={to}
+      onClick={onNavigate}
       className={({ isActive }) =>
         `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
         ${isActive
@@ -41,9 +50,21 @@ function MenuItem({ to, icon: Icon, children }) {
   );
 }
 
-// Menu group with collapsible items
-function MenuGroup({ icon: Icon, label, children, defaultOpen = false }) {
+// Menu group with collapsible items and permission check
+function MenuGroup({ icon: Icon, label, children, defaultOpen = false, menuKey }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const userRole = useAuthStore((state) => state.user?.role);
+
+  // Filter children to only include those that have permission
+  const visibleChildren = children?.filter(child => {
+    if (!child) return false;
+    return true; // Let individual items handle their own permission
+  });
+
+  // If menuKey is specified and user doesn't have access, hide the group
+  if (menuKey && !canAccessMenu(userRole, menuKey)) {
+    return null;
+  }
 
   return (
     <div>
@@ -70,11 +91,18 @@ function MenuGroup({ icon: Icon, label, children, defaultOpen = false }) {
   );
 }
 
-// Sub menu item (for groups)
-function SubMenuItem({ to, children }) {
+// Sub menu item (for groups) with permission check
+function SubMenuItem({ to, children, menuKey, onNavigate }) {
+  const userRole = useAuthStore((state) => state.user?.role);
+
+  if (menuKey && !canAccessMenu(userRole, menuKey)) {
+    return null;
+  }
+
   return (
     <NavLink
       to={to}
+      onClick={onNavigate}
       className={({ isActive }) =>
         `block px-3 py-1.5 rounded-lg text-sm transition-colors
         ${isActive
@@ -97,11 +125,26 @@ function MenuLabel({ children }) {
   );
 }
 
-export default function Sidebar() {
-  return (
-    <aside className="w-64 h-screen bg-[hsl(var(--card))] border-r border-[hsl(var(--border))] flex flex-col">
+export default function Sidebar({ isOpen, onClose }) {
+  const userRole = useAuthStore((state) => state.user?.role);
+  const location = useLocation();
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    onClose?.();
+  }, [location.pathname]);
+
+  // Check if any items in a section are visible
+  const hasProductionAccess = canAccessMenu(userRole, 'recipes') || canAccessMenu(userRole, 'production');
+  const hasWarehouseAccess = canAccessMenu(userRole, 'warehouse');
+  const hasSalesAccess = canAccessMenu(userRole, 'sales') || canAccessMenu(userRole, 'clients');
+  const hasFinanceAccess = canAccessMenu(userRole, 'expenses') || canAccessMenu(userRole, 'payroll');
+  const hasSettingsAccess = canAccessMenu(userRole, 'settings/users') || canAccessMenu(userRole, 'settings/branches') || canAccessMenu(userRole, 'employees') || canAccessMenu(userRole, 'settings/audit-log');
+
+  const sidebarContent = (
+    <>
       {/* Logo */}
-      <div className="p-4 border-b border-[hsl(var(--border))]">
+      <div className="p-4 border-b border-[hsl(var(--border))] flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[hsl(var(--primary))] flex items-center justify-center">
             <GlassWater className="w-5 h-5 text-[hsl(var(--primary-foreground))]" />
@@ -111,72 +154,84 @@ export default function Sidebar() {
             <p className="text-xs text-[hsl(var(--muted-foreground))]">Система учёта</p>
           </div>
         </div>
+        {/* Close button — mobile only */}
+        <button
+          onClick={onClose}
+          className="lg:hidden p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors"
+        >
+          <X className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />
+        </button>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
         {/* Основное */}
-        <MenuItem to="/dashboard" icon={LayoutDashboard}>
+        <MenuItem to="/dashboard" icon={LayoutDashboard} menuKey="dashboard" onNavigate={onClose}>
           Главная
         </MenuItem>
 
         {/* Производство */}
-        <MenuLabel>Производство</MenuLabel>
-        <MenuItem to="/recipes" icon={BookOpen}>
+        {hasProductionAccess && <MenuLabel>Производство</MenuLabel>}
+        <MenuItem to="/recipes" icon={BookOpen} menuKey="recipes" onNavigate={onClose}>
           Рецептуры
         </MenuItem>
-        <MenuItem to="/production" icon={Factory}>
+        <MenuItem to="/production" icon={Factory} menuKey="production" onNavigate={onClose}>
           Партии
         </MenuItem>
 
         {/* Склад */}
-        <MenuLabel>Склад</MenuLabel>
-        <MenuGroup icon={Package} label="Склад" defaultOpen>
-          <SubMenuItem to="/settings/ingredients">Сырьё и материалы</SubMenuItem>
-          <SubMenuItem to="/warehouse/materials">Остатки</SubMenuItem>
-          <SubMenuItem to="/warehouse/products">Готовая продукция</SubMenuItem>
-          <SubMenuItem to="/warehouse/transfers">Трансферы</SubMenuItem>
-          <SubMenuItem to="/warehouse/inventory">Инвентаризация</SubMenuItem>
-        </MenuGroup>
+        {hasWarehouseAccess && <MenuLabel>Склад</MenuLabel>}
+        {hasWarehouseAccess && (
+          <MenuGroup icon={Package} label="Склад" defaultOpen menuKey="warehouse">
+            <SubMenuItem to="/settings/ingredients" menuKey="settings/ingredients" onNavigate={onClose}>Сырьё и материалы</SubMenuItem>
+            <SubMenuItem to="/warehouse/materials" onNavigate={onClose}>Остатки</SubMenuItem>
+            <SubMenuItem to="/warehouse/products" menuKey="products" onNavigate={onClose}>Готовая продукция</SubMenuItem>
+            <SubMenuItem to="/warehouse/transfers" menuKey="transfers" onNavigate={onClose}>Трансферы</SubMenuItem>
+            <SubMenuItem to="/warehouse/inventory" onNavigate={onClose}>Инвентаризация</SubMenuItem>
+          </MenuGroup>
+        )}
 
         {/* Продажи */}
-        <MenuLabel>Продажи</MenuLabel>
-        <MenuItem to="/sales" icon={ShoppingCart}>
+        {hasSalesAccess && <MenuLabel>Продажи</MenuLabel>}
+        <MenuItem to="/sales" icon={ShoppingCart} menuKey="sales" onNavigate={onClose}>
           Продажи
         </MenuItem>
-        <MenuItem to="/returns" icon={RotateCcw}>
+        <MenuItem to="/returns" icon={RotateCcw} menuKey="sales" onNavigate={onClose}>
           Возвраты
         </MenuItem>
-        <MenuItem to="/clients" icon={Users}>
+        <MenuItem to="/clients" icon={Users} menuKey="clients" onNavigate={onClose}>
           Клиенты
         </MenuItem>
 
         {/* Финансы */}
-        <MenuLabel>Финансы</MenuLabel>
-        <MenuItem to="/expenses" icon={Wallet}>
+        {hasFinanceAccess && <MenuLabel>Финансы</MenuLabel>}
+        <MenuItem to="/expenses" icon={Wallet} menuKey="expenses" onNavigate={onClose}>
           Расходы
         </MenuItem>
-        <MenuItem to="/payroll" icon={Calculator}>
+        <MenuItem to="/payroll" icon={Calculator} menuKey="payroll" onNavigate={onClose}>
           Зарплата
         </MenuItem>
-        <MenuItem to="/settings/exchange-rates" icon={DollarSign}>
+        <MenuItem to="/settings/exchange-rates" icon={DollarSign} menuKey="settings/exchange-rates" onNavigate={onClose}>
           Курсы валют
         </MenuItem>
 
         {/* Отчёты */}
         <MenuLabel>Аналитика</MenuLabel>
-        <MenuItem to="/reports" icon={BarChart3}>
+        <MenuItem to="/reports" icon={BarChart3} menuKey="reports" onNavigate={onClose}>
           Отчёты
         </MenuItem>
 
         {/* Настройки */}
-        <MenuLabel>Настройки</MenuLabel>
-        <MenuGroup icon={Settings} label="Настройки">
-          <SubMenuItem to="/settings/branches">Филиалы</SubMenuItem>
-          <SubMenuItem to="/settings/employees">Сотрудники</SubMenuItem>
-          <SubMenuItem to="/settings/users">Пользователи</SubMenuItem>
-          <SubMenuItem to="/settings/suppliers">Поставщики</SubMenuItem>
-        </MenuGroup>
+        {hasSettingsAccess && <MenuLabel>Настройки</MenuLabel>}
+        {hasSettingsAccess && (
+          <MenuGroup icon={Settings} label="Настройки">
+            <SubMenuItem to="/settings/branches" menuKey="settings/branches" onNavigate={onClose}>Филиалы</SubMenuItem>
+            <SubMenuItem to="/settings/employees" menuKey="employees" onNavigate={onClose}>Сотрудники</SubMenuItem>
+            <SubMenuItem to="/settings/users" menuKey="settings/users" onNavigate={onClose}>Пользователи</SubMenuItem>
+            <SubMenuItem to="/settings/suppliers" menuKey="settings/suppliers" onNavigate={onClose}>Поставщики</SubMenuItem>
+            <SubMenuItem to="/settings/audit-log" menuKey="settings/audit-log" onNavigate={onClose}>Журнал событий</SubMenuItem>
+          </MenuGroup>
+        )}
       </nav>
 
       {/* Footer */}
@@ -185,6 +240,30 @@ export default function Sidebar() {
           v1.0.0
         </p>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar — always visible */}
+      <aside className="hidden lg:flex w-64 h-screen bg-[hsl(var(--card))] border-r border-[hsl(var(--border))] flex-col shrink-0">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile sidebar — overlay */}
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="lg:hidden fixed inset-0 bg-black/50 z-40"
+            onClick={onClose}
+          />
+          {/* Drawer */}
+          <aside className="lg:hidden fixed inset-y-0 left-0 z-50 w-72 bg-[hsl(var(--card))] flex flex-col shadow-xl animate-slide-in">
+            {sidebarContent}
+          </aside>
+        </>
+      )}
+    </>
   );
 }

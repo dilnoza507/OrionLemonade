@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrionLemonade.API.Authorization;
 using OrionLemonade.Application.DTOs;
 using OrionLemonade.Application.Interfaces;
 
@@ -8,7 +9,7 @@ namespace OrionLemonade.API.Controllers;
 
 [ApiController]
 [Route("api/sales")]
-[Authorize]
+[Authorize(Roles = Roles.SalesView)]
 public class SalesController : ControllerBase
 {
     private readonly ISaleService _saleService;
@@ -56,6 +57,7 @@ public class SalesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = Roles.SalesCreate)]
     public async Task<ActionResult<SaleDto>> CreateSale([FromBody] CreateSaleDto dto)
     {
         var userId = GetUserId();

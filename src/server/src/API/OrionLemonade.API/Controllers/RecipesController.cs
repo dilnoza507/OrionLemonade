@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrionLemonade.API.Authorization;
 using OrionLemonade.Application.DTOs;
 using OrionLemonade.Application.Interfaces;
 using System.Security.Claims;
 
 namespace OrionLemonade.API.Controllers;
 
-[Authorize]
+[Authorize(Roles = Roles.RecipesView)]
 [ApiController]
 [Route("api/[controller]")]
 public class RecipesController : ControllerBase

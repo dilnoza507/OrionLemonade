@@ -50,6 +50,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<PayrollItem> PayrollItems => Set<PayrollItem>();
     public DbSet<EmployeeRateHistory> EmployeeRateHistories => Set<EmployeeRateHistory>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -905,6 +906,28 @@ public class ApplicationDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Branch)
+                .WithMany()
+                .HasForeignKey(e => e.BranchId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EntityType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Action).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.OldValue).HasColumnType("jsonb");
+            entity.Property(e => e.NewValue).HasColumnType("jsonb");
+            entity.HasIndex(e => new { e.EntityType, e.EntityId });
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.ActionTime);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(e => e.Branch)
                 .WithMany()

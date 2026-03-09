@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrionLemonade.API.Authorization;
 using OrionLemonade.Application.DTOs;
 using OrionLemonade.Application.Interfaces;
 

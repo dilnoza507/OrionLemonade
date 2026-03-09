@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrionLemonade.API.Authorization;
 using OrionLemonade.Application.DTOs;
 using OrionLemonade.Application.Interfaces;
 using System.Security.Claims;
@@ -8,7 +9,7 @@ namespace OrionLemonade.API.Controllers;
 
 [ApiController]
 [Route("api/product-stock")]
-[Authorize]
+[Authorize(Roles = Roles.AllRoles)]
 public class ProductStockController : ControllerBase
 {
     private readonly IProductStockService _productStockService;

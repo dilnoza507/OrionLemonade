@@ -30,6 +30,7 @@ import ExchangeRatesPage from './pages/settings/ExchangeRatesPage';
 import IngredientsPage from './pages/settings/IngredientsPage';
 import ExpenseCategoriesPage from './pages/settings/ExpenseCategoriesPage';
 import SuppliersPage from './pages/settings/SuppliersPage';
+import AuditLogPage from './pages/settings/AuditLogPage';
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -92,6 +93,7 @@ function App() {
           <Route path="/settings/ingredients" element={<IngredientsPage />} />
           <Route path="/settings/expense-categories" element={<ExpenseCategoriesPage />} />
           <Route path="/settings/suppliers" element={<SuppliersPage />} />
+          <Route path="/settings/audit-log" element={<AuditLogPage />} />
         </Route>
 
         {/* Catch all - redirect to dashboard */}

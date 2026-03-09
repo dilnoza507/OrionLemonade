@@ -1,12 +1,13 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrionLemonade.API.Authorization;
 using OrionLemonade.Application.DTOs;
 using OrionLemonade.Application.Interfaces;
 
 namespace OrionLemonade.API.Controllers;
 
-[Authorize]
+[Authorize(Roles = Roles.SettingsExchangeRates)]
 [ApiController]
 [Route("api/[controller]")]
 public class ExchangeRatesController : ControllerBase
