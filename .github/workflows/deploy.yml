@@ -1,0 +1,118 @@
+name: Deploy OrionLemonade
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  NODE_VERSION: "22"
+  SERVER_BACKEND_PATH: "/var/www/orionlemonade/api"
+  SERVER_FRONTEND_PATH: "/var/www/orionlemonade/client"
+  SERVICE_NAME: "orionlemonade"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Backend ──
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Publish backend (self-contained linux-x64)
+        run: |
+          dotnet publish src/server/src/API/OrionLemonade.API/OrionLemonade.API.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained true \
+            -o ./publish/backend
+
+      # ── Frontend ──
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: src/client/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: src/client
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: src/client
+        env:
+          VITE_API_URL: ${{ secrets.API_URL }}
+        run: npm run build
+
+      - name: Move frontend build output
+        run: mv src/client/dist ./publish/frontend
+
+      # ── Archive ──
+      - name: Create tar archives
+        run: |
+          cd publish
+          tar -czf backend.tar.gz -C backend .
+          tar -czf frontend.tar.gz -C frontend .
+
+      # ── Deploy ──
+      - name: Copy archives to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "publish/backend.tar.gz,publish/frontend.tar.gz"
+          target: "/tmp/orionlemonade-deploy"
+          strip_components: 1
+
+      - name: Deploy on server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+
+            BACKEND_PATH="${{ env.SERVER_BACKEND_PATH }}"
+            FRONTEND_PATH="${{ env.SERVER_FRONTEND_PATH }}"
+            SERVICE="${{ env.SERVICE_NAME }}"
+            DEPLOY_DIR="/tmp/orionlemonade-deploy"
+
+            echo "==> Stopping service ${SERVICE}..."
+            sudo systemctl stop ${SERVICE}
+
+            echo "==> Deploying backend..."
+            mkdir -p ${BACKEND_PATH}
+            rm -rf ${BACKEND_PATH}/*
+            tar -xzf ${DEPLOY_DIR}/backend.tar.gz -C ${BACKEND_PATH}
+            chmod +x ${BACKEND_PATH}/OrionLemonade.API
+
+            echo "==> Deploying frontend..."
+            mkdir -p ${FRONTEND_PATH}
+            rm -rf ${FRONTEND_PATH}/*
+            tar -xzf ${DEPLOY_DIR}/frontend.tar.gz -C ${FRONTEND_PATH}
+
+            echo "==> Starting service ${SERVICE}..."
+            sudo systemctl start ${SERVICE}
+
+            echo "==> Cleaning up..."
+            rm -rf ${DEPLOY_DIR}
+
+            echo "==> Verifying service status..."
+            sleep 3
+            sudo systemctl is-active ${SERVICE} || (echo "Service failed to start!" && sudo journalctl -u ${SERVICE} -n 30 --no-pager && exit 1)
+
+            echo "==> Deployment complete!"

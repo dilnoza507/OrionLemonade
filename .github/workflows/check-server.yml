@@ -1,0 +1,37 @@
+name: Check Server Connection
+
+on:
+  workflow_dispatch:
+
+env:
+  SERVICE_NAME: "orionlemonade"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check SSH connection & service status
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            echo "==> Connected as $(whoami)@$(hostname)"
+            echo "==> Uptime: $(uptime)"
+            echo ""
+            echo "==> Service status:"
+            sudo systemctl status ${{ env.SERVICE_NAME }} --no-pager -l || true
+            echo ""
+            echo "==> Last 20 log lines:"
+            sudo journalctl -u ${{ env.SERVICE_NAME }} -n 20 --no-pager || true
+            echo ""
+            echo "==> Disk usage:"
+            df -h /var/www/orionlemonade 2>/dev/null || df -h /
+            echo ""
+            echo "==> Backend binary exists:"
+            ls -lh /var/www/orionlemonade/api/OrionLemonade.API 2>/dev/null || echo "NOT FOUND"
+            echo ""
+            echo "==> Nginx status:"
+            sudo systemctl is-active nginx || true
