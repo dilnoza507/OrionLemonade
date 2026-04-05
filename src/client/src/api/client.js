@@ -1,6 +1,6 @@
 import { useAuthStore } from '../stores/auth';
 
-const API_URL = 'http://localhost:5162/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Centralized fetch with auth handling
 export async function apiFetch(endpoint, options = {}) {

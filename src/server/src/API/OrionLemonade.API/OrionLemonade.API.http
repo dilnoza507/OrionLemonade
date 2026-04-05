@@ -1,4 +1,4 @@
-@OrionLemonade.API_HostAddress = http://localhost:5162
+@OrionLemonade.API_HostAddress = http://155.212.137.123
 
 GET {{OrionLemonade.API_HostAddress}}/weatherforecast/
 Accept: application/json
