@@ -59,20 +59,15 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
-        if (allowedOrigins is { Length: > 0 })
-        {
-            policy.WithOrigins(allowedOrigins)
-                .AllowAnyMethod()
-                .AllowAnyHeader();
-        }
-        else
-        {
-            // Default: allow localhost for development
-            policy.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost")
-                .AllowAnyMethod()
-                .AllowAnyHeader();
-        }
+        policy.WithOrigins(
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "http://localhost:5175",
+                "http://155.212.137.123",
+                "https://155.212.137.123"
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader();
     });
 });
 
