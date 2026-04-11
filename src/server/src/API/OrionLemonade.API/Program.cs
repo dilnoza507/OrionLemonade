@@ -73,6 +73,13 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Apply pending migrations on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await db.Database.MigrateAsync();
+}
+
 // Seed superadmin user if no users exist
 await SeedSuperAdminAsync(app);
 
