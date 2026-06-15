@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, Edit2, Trash2, X, Eye, CheckCircle, Truck, Ban, CreditCard, DollarSign, Clock, Package, FileText } from 'lucide-react';
+import { ShoppingCart, Plus, Edit2, Trash2, X, Eye, CheckCircle, Truck, Ban, CreditCard, DollarSign, Clock, Package, FileText, Settings2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getSales, createSale, updateSale, deleteSale, getSaleDetail, confirmSale, shipSale, cancelSale, addPayment, deletePayment, getSalesSummary } from '../api/sales';
 import { getRecipes } from '../api/recipes';
 import { getBranches } from '../api/branches';
 import { getClients } from '../api/clients';
 import { getPriceLists, getPriceListDetail } from '../api/priceLists';
+import { useBranchAccess } from '../hooks/useBranchAccess';
 
 const statusLabels = {
   Draft: 'Черновик',
@@ -40,6 +41,7 @@ const mutedClass = "text-[hsl(var(--muted-foreground))]";
 
 export default function SalesPage() {
   const navigate = useNavigate();
+  const { isAllBranches, filterBranches, getDefaultBranchId } = useBranchAccess();
   const [sales, setSales] = useState([]);
   const [summary, setSummary] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -56,7 +58,21 @@ export default function SalesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showDefaultsModal, setShowDefaultsModal] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
+
+  const [saleDefaults, setSaleDefaults] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('sales_defaults') || '{}');
+    } catch {
+      return {};
+    }
+  });
+
+  function saveDefaults(defaults) {
+    setSaleDefaults(defaults);
+    localStorage.setItem('sales_defaults', JSON.stringify(defaults));
+  }
 
   useEffect(() => {
     loadInitialData();
@@ -76,12 +92,14 @@ export default function SalesPage() {
         getSalesSummary(),
         getPriceLists(null, true) // only active price lists
       ]);
-      setBranches(branchesData.filter(b => b.status === 'Active'));
+      const activeBranches = branchesData.filter(b => b.status === 'Active');
+      const allowed = filterBranches(activeBranches);
+      setBranches(allowed);
+      setSelectedBranch(getDefaultBranchId(allowed));
       setClients(clientsData.filter(c => c.status === 'Active'));
       setRecipes(recipesData.filter(r => r.status === 'Active'));
       setSummary(summaryData);
       setPriceLists(priceListsData);
-      await loadSales();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -123,9 +141,14 @@ export default function SalesPage() {
     }
   }
 
-  function handleEdit(sale) {
-    setSelectedSale(sale);
-    setShowEditModal(true);
+  async function handleEdit(sale) {
+    try {
+      const detail = await getSaleDetail(sale.id);
+      setSelectedSale(detail);
+      setShowEditModal(true);
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   const totalSales = summary.reduce((acc, s) => acc + s.totalSales, 0);
@@ -193,9 +216,10 @@ export default function SalesPage() {
           <select
             value={selectedBranch}
             onChange={e => setSelectedBranch(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]"
+            disabled={!isAllBranches && branches.length <= 1}
+            className="px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))] disabled:opacity-70"
           >
-            <option value="">Все филиалы</option>
+            {isAllBranches && <option value="">Все филиалы</option>}
             {branches.map(b => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
@@ -232,6 +256,13 @@ export default function SalesPage() {
           >
             <FileText className="w-4 h-4" />
             Прайс-листы
+          </button>
+          <button
+            onClick={() => setShowDefaultsModal(true)}
+            className="p-2 bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] rounded-lg hover:bg-[hsl(var(--muted))]/80"
+            title="Настройки по умолчанию"
+          >
+            <Settings2 className="w-4 h-4" />
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -330,6 +361,7 @@ export default function SalesPage() {
           clients={clients}
           recipes={recipes}
           priceLists={priceLists}
+          defaults={saleDefaults}
           onClose={() => setShowCreateModal(false)}
           onSave={async () => {
             setShowCreateModal(false);
@@ -341,11 +373,28 @@ export default function SalesPage() {
         />
       )}
 
+      {showDefaultsModal && (
+        <SalesDefaultsModal
+          branches={branches}
+          clients={clients}
+          recipes={recipes}
+          priceLists={priceLists}
+          defaults={saleDefaults}
+          onClose={() => setShowDefaultsModal(false)}
+          onSave={defaults => {
+            saveDefaults(defaults);
+            setShowDefaultsModal(false);
+          }}
+        />
+      )}
+
       {/* Edit Modal */}
       {showEditModal && selectedSale && (
         <EditSaleModal
           sale={selectedSale}
           clients={clients}
+          recipes={recipes}
+          priceLists={priceLists}
           onClose={() => {
             setShowEditModal(false);
             setSelectedSale(null);
@@ -354,6 +403,8 @@ export default function SalesPage() {
             setShowEditModal(false);
             setSelectedSale(null);
             await loadSales();
+            const summaryData = await getSalesSummary();
+            setSummary(summaryData);
           }}
           setError={setError}
         />
@@ -381,17 +432,25 @@ export default function SalesPage() {
   );
 }
 
-function CreateSaleModal({ branches, clients, recipes, priceLists, onClose, onSave, setError }) {
+function CreateSaleModal({ branches, clients, recipes, priceLists, defaults = {}, onClose, onSave, setError }) {
+  const defaultBranch = defaults.branchId
+    ? branches.find(b => b.id.toString() === defaults.branchId.toString())
+    : branches[0];
+
   const [form, setForm] = useState({
-    branchId: branches.length > 0 ? branches[0].id.toString() : '',
+    branchId: defaultBranch ? defaultBranch.id.toString() : '',
     saleDate: new Date().toISOString().split('T')[0],
-    clientId: '',
-    priceListId: '',
+    clientId: defaults.clientId ? defaults.clientId.toString() : '',
+    priceListId: defaults.priceListId ? defaults.priceListId.toString() : '',
     paymentMethod: 'Cash',
     paymentDueDate: '',
     notes: ''
   });
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(
+    defaults.recipeId
+      ? [{ recipeId: defaults.recipeId.toString(), quantity: '1', unitPriceTjs: '' }]
+      : []
+  );
   const [saving, setSaving] = useState(false);
   const [priceListItems, setPriceListItems] = useState([]);
 
@@ -404,7 +463,18 @@ function CreateSaleModal({ branches, clients, recipes, priceLists, onClose, onSa
   useEffect(() => {
     if (form.priceListId) {
       getPriceListDetail(form.priceListId)
-        .then(data => setPriceListItems(data.items || []))
+        .then(data => {
+          const loaded = data.items || [];
+          setPriceListItems(loaded);
+          // Auto-fill prices for existing items
+          if (loaded.length > 0) {
+            setItems(prev => prev.map(item => {
+              if (!item.recipeId) return item;
+              const match = loaded.find(pi => pi.recipeId.toString() === item.recipeId.toString());
+              return match ? { ...item, unitPriceTjs: match.priceTjs.toString() } : item;
+            }));
+          }
+        })
         .catch(() => setPriceListItems([]));
     } else {
       setPriceListItems([]);
@@ -666,19 +736,72 @@ function CreateSaleModal({ branches, clients, recipes, priceLists, onClose, onSa
   );
 }
 
-function EditSaleModal({ sale, clients, onClose, onSave, setError }) {
+function EditSaleModal({ sale, clients, recipes, priceLists, onClose, onSave, setError }) {
   const [form, setForm] = useState({
     saleDate: sale.saleDate.split('T')[0],
     clientId: sale.clientId.toString(),
-    paymentMethod: sale.paymentMethodName,
+    paymentMethod: sale.paymentMethod ?? sale.paymentMethodName,
     paymentDueDate: sale.paymentDueDate ? sale.paymentDueDate.split('T')[0] : '',
+    priceListId: '',
     notes: sale.notes || ''
   });
+  const [items, setItems] = useState(
+    (sale.items || []).map(i => ({
+      recipeId: i.recipeId.toString(),
+      quantity: i.quantity.toString(),
+      unitPriceTjs: i.unitPriceTjs.toString()
+    }))
+  );
+  const [priceListItems, setPriceListItems] = useState([]);
   const [saving, setSaving] = useState(false);
+
+  const filteredPriceLists = priceLists.filter(pl =>
+    !pl.branchId || pl.branchId === sale.branchId
+  );
+
+  useEffect(() => {
+    if (form.priceListId) {
+      getPriceListDetail(form.priceListId)
+        .then(data => setPriceListItems(data.items || []))
+        .catch(() => setPriceListItems([]));
+    } else {
+      setPriceListItems([]);
+    }
+  }, [form.priceListId]);
+
+  function addItem() {
+    setItems([...items, { recipeId: '', quantity: '1', unitPriceTjs: '' }]);
+  }
+
+  function updateItem(index, field, value) {
+    const newItems = [...items];
+    newItems[index][field] = value;
+    if (field === 'recipeId' && value && priceListItems.length > 0) {
+      const priceItem = priceListItems.find(pi => pi.recipeId.toString() === value);
+      if (priceItem) newItems[index].unitPriceTjs = priceItem.priceTjs.toString();
+    }
+    setItems(newItems);
+  }
+
+  function removeItem(index) {
+    setItems(items.filter((_, i) => i !== index));
+  }
+
+  const total = items.reduce((acc, item) => {
+    return acc + (parseInt(item.quantity) || 0) * (parseFloat(item.unitPriceTjs) || 0);
+  }, 0);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.clientId) return;
+    if (!form.clientId || items.length === 0) {
+      setError('Добавьте хотя бы одну позицию');
+      return;
+    }
+    const invalidItems = items.filter(i => !i.recipeId || !i.quantity || !i.unitPriceTjs);
+    if (invalidItems.length > 0) {
+      setError('Заполните все поля позиций');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -687,7 +810,12 @@ function EditSaleModal({ sale, clients, onClose, onSave, setError }) {
         clientId: parseInt(form.clientId),
         paymentMethod: form.paymentMethod,
         paymentDueDate: form.paymentDueDate ? new Date(form.paymentDueDate).toISOString() : null,
-        notes: form.notes || null
+        notes: form.notes || null,
+        items: items.map(i => ({
+          recipeId: parseInt(i.recipeId),
+          quantity: parseInt(i.quantity),
+          unitPriceTjs: parseFloat(i.unitPriceTjs)
+        }))
       });
       onSave();
     } catch (err) {
@@ -698,58 +826,74 @@ function EditSaleModal({ sale, clients, onClose, onSave, setError }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[hsl(var(--card))] rounded-xl w-full max-w-md border border-[hsl(var(--border))]">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-auto p-6">
+      <div className="bg-[hsl(var(--card))] rounded-xl w-full max-w-3xl border border-[hsl(var(--border))] max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-[hsl(var(--border))]">
           <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Редактировать продажу</h2>
           <button onClick={onClose} className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
             <X className="w-5 h-5" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Дата продажи *</label>
-            <input
-              type="date"
-              value={form.saleDate}
-              onChange={e => setForm({ ...form, saleDate: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
-              required
-            />
+        <form onSubmit={handleSubmit} className="flex-1 overflow-auto p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Дата продажи *</label>
+              <input
+                type="date"
+                value={form.saleDate}
+                onChange={e => setForm({ ...form, saleDate: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Клиент *</label>
+              <select
+                value={form.clientId}
+                onChange={e => setForm({ ...form, clientId: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
+                required
+              >
+                {clients.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Способ оплаты</label>
+              <select
+                value={form.paymentMethod}
+                onChange={e => setForm({ ...form, paymentMethod: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
+              >
+                <option value="Cash">Наличные</option>
+                <option value="BankTransfer">Перевод</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Срок оплаты</label>
+              <input
+                type="date"
+                value={form.paymentDueDate}
+                onChange={e => setForm({ ...form, paymentDueDate: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Прайс-лист</label>
+              <select
+                value={form.priceListId}
+                onChange={e => setForm({ ...form, priceListId: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
+              >
+                <option value="">Без прайс-листа</option>
+                {filteredPriceLists.map(pl => (
+                  <option key={pl.id} value={pl.id}>{pl.name} {pl.branchName ? `(${pl.branchName})` : '(Общий)'}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Клиент *</label>
-            <select
-              value={form.clientId}
-              onChange={e => setForm({ ...form, clientId: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
-              required
-            >
-              {clients.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Способ оплаты</label>
-            <select
-              value={form.paymentMethod}
-              onChange={e => setForm({ ...form, paymentMethod: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
-            >
-              <option value="Cash">Наличные</option>
-              <option value="BankTransfer">Перевод</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Срок оплаты</label>
-            <input
-              type="date"
-              value={form.paymentDueDate}
-              onChange={e => setForm({ ...form, paymentDueDate: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
-            />
-          </div>
+
           <div>
             <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Примечание</label>
             <textarea
@@ -759,21 +903,91 @@ function EditSaleModal({ sale, clients, onClose, onSave, setError }) {
               rows={2}
             />
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]"
-            >
-              Отмена
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-2 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary))]/90 disabled:opacity-50"
-            >
-              {saving ? 'Сохранение...' : 'Сохранить'}
-            </button>
+
+          {/* Items */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-sm font-medium text-[hsl(var(--foreground))]">Позиции *</label>
+              <button
+                type="button"
+                onClick={addItem}
+                className="px-3 py-1 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] rounded text-sm flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                Добавить
+              </button>
+            </div>
+            <div className="space-y-2">
+              {items.map((item, index) => (
+                <div key={index} className="flex gap-2 items-center p-2 bg-[hsl(var(--muted))]/30 rounded-lg">
+                  <select
+                    value={item.recipeId}
+                    onChange={e => updateItem(index, 'recipeId', e.target.value)}
+                    className="flex-1 px-2 py-1.5 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm"
+                    required
+                  >
+                    <option value="">Выберите продукт</option>
+                    {recipes.map(r => (
+                      <option key={r.id} value={r.id}>{r.productName}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Кол-во"
+                    value={item.quantity}
+                    onChange={e => updateItem(index, 'quantity', e.target.value)}
+                    className="w-20 px-2 py-1.5 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm"
+                    required
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Цена TJS"
+                    value={item.unitPriceTjs}
+                    onChange={e => updateItem(index, 'unitPriceTjs', e.target.value)}
+                    className="w-28 px-2 py-1.5 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm"
+                    required
+                  />
+                  <div className="w-24 text-right text-sm font-medium text-[hsl(var(--foreground))]">
+                    {((parseInt(item.quantity) || 0) * (parseFloat(item.unitPriceTjs) || 0)).toLocaleString()} TJS
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(index)}
+                    className="p-1.5 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--muted))] rounded"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+              {items.length === 0 && (
+                <p className="text-center text-[hsl(var(--muted-foreground))] py-4">Добавьте позиции</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center pt-2 border-t border-[hsl(var(--border))]">
+            <div className="text-lg font-bold text-[hsl(var(--foreground))]">
+              Итого: {total.toLocaleString()} TJS
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]"
+              >
+                Отмена
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-2 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary))]/90 disabled:opacity-50"
+              >
+                {saving ? 'Сохранение...' : 'Сохранить'}
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -1077,6 +1291,108 @@ function SaleDetailModal({ sale, onClose, onRefresh, setError }) {
           >
             Закрыть
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SalesDefaultsModal({ branches, clients, recipes, priceLists, defaults, onClose, onSave }) {
+  const [form, setForm] = useState({
+    branchId: defaults.branchId ? defaults.branchId.toString() : '',
+    clientId: defaults.clientId ? defaults.clientId.toString() : '',
+    priceListId: defaults.priceListId ? defaults.priceListId.toString() : '',
+    recipeId: defaults.recipeId ? defaults.recipeId.toString() : '',
+  });
+
+  const inputClass = "w-full px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]";
+
+  function handleSave() {
+    onSave({
+      branchId: form.branchId || null,
+      clientId: form.clientId || null,
+      priceListId: form.priceListId || null,
+      recipeId: form.recipeId || null,
+    });
+  }
+
+  function handleReset() {
+    setForm({ branchId: '', clientId: '', priceListId: '', recipeId: '' });
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-[hsl(var(--card))] rounded-xl w-full max-w-sm border border-[hsl(var(--border))]">
+        <div className="flex items-center justify-between p-4 border-b border-[hsl(var(--border))]">
+          <div className="flex items-center gap-2">
+            <Settings2 className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+            <h2 className="text-base font-semibold text-[hsl(var(--foreground))]">По умолчанию для новых продаж</h2>
+          </div>
+          <button onClick={onClose} className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Филиал</label>
+            <select value={form.branchId} onChange={e => setForm({ ...form, branchId: e.target.value })} className={inputClass}>
+              <option value="">— не задан —</option>
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Клиент</label>
+            <select value={form.clientId} onChange={e => setForm({ ...form, clientId: e.target.value })} className={inputClass}>
+              <option value="">— не задан —</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Прайс-лист</label>
+            <select value={form.priceListId} onChange={e => setForm({ ...form, priceListId: e.target.value })} className={inputClass}>
+              <option value="">— не задан —</option>
+              {priceLists.map(pl => (
+                <option key={pl.id} value={pl.id}>{pl.name} {pl.branchName ? `(${pl.branchName})` : '(Общий)'}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Продукт (добавить в позиции)</label>
+            <select value={form.recipeId} onChange={e => setForm({ ...form, recipeId: e.target.value })} className={inputClass}>
+              <option value="">— не задан —</option>
+              {recipes.map(r => <option key={r.id} value={r.id}>{r.productName}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center p-4 border-t border-[hsl(var(--border))]">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="px-3 py-2 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+          >
+            Сбросить
+          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]"
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="px-4 py-2 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary))]/90"
+            >
+              Сохранить
+            </button>
+          </div>
         </div>
       </div>
     </div>

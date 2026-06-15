@@ -13,6 +13,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { getDashboardSummary } from '../api/dashboard';
+import { useBranchAccess } from '../hooks/useBranchAccess';
 
 // Stat Card Component
 function StatCard({ title, value, icon: Icon, description, trend, loading }) {
@@ -71,6 +72,9 @@ function formatTimeAgo(dateStr) {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { isAllBranches, userBranchIds } = useBranchAccess();
+  const restrictedBranchId = !isAllBranches && userBranchIds.length > 0 ? userBranchIds[0] : null;
+
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({
     revenue: { value: 0, change: 0, trend: 'up' },
@@ -83,12 +87,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [restrictedBranchId]);
 
   async function loadDashboardData() {
     try {
       setLoading(true);
-      const summary = await getDashboardSummary();
+      const summary = await getDashboardSummary(restrictedBranchId);
       setData(summary);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);

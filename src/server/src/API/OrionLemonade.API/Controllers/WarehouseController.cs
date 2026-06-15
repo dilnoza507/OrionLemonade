@@ -96,6 +96,14 @@ public class WarehouseController : ControllerBase
         return CreatedAtAction(nameof(GetReceipt), new { id = receipt.Id }, receipt);
     }
 
+    [HttpPut("receipts/{id}")]
+    public async Task<ActionResult<IngredientReceiptDto>> UpdateReceipt(int id, UpdateIngredientReceiptDto dto, CancellationToken cancellationToken)
+    {
+        var receipt = await _warehouseService.UpdateReceiptAsync(id, dto, cancellationToken);
+        if (receipt is null) return NotFound();
+        return Ok(receipt);
+    }
+
     [HttpDelete("receipts/{id}")]
     public async Task<IActionResult> DeleteReceipt(int id, CancellationToken cancellationToken)
     {

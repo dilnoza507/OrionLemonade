@@ -28,7 +28,9 @@
       "Bash(tasklist:*)",
       "Bash(cmd.exe /c \"taskkill /F /PID 50460\")",
       "Bash(wmic process where \"ProcessId=50460\" delete)",
-      "Bash(PGPASSWORD=lemonade123 psql:*)"
+      "Bash(PGPASSWORD=lemonade123 psql:*)",
+      "Bash(\"/c/Program Files/PostgreSQL/18/bin/psql.exe\":*)",
+      "Bash(dotnet run:*)"
     ]
   }
 }

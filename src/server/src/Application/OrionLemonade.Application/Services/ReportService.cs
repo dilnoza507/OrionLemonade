@@ -155,9 +155,10 @@ public class ReportService : IReportService
             .Where(t => t.WorkDate >= startDateOnly && t.WorkDate <= endDateOnly)
             .ToListAsync(cancellationToken);
 
+        const decimal hoursPerWorkday = 8m;
         var daysWorkedByEmployee = timesheets
             .GroupBy(t => t.EmployeeId)
-            .ToDictionary(g => g.Key, g => g.Count());
+            .ToDictionary(g => g.Key, g => g.Sum(t => t.HoursWorked) / hoursPerWorkday);
 
         var result = payrolls
             .GroupBy(p => new { p.EmployeeId, p.Employee.FullName, p.Employee.Position })

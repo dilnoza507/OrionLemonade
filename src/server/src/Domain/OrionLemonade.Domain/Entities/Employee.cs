@@ -9,6 +9,8 @@ public class Employee : BaseEntity
     public string? Position { get; set; }
     public string? Phone { get; set; }
     public DateOnly? HireDate { get; set; }
+    public DateOnly? DateOfBirth { get; set; }
+    public string? Address { get; set; }
     public decimal? DailyRate { get; set; }
     public decimal? MonthlyRate { get; set; }
     public int? BranchId { get; set; }

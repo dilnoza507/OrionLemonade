@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using OrionLemonade.Application.DTOs.Auth;
 using OrionLemonade.Application.Interfaces;
+using OrionLemonade.Domain.Entities;
+using System.Security.Claims;
 
 namespace OrionLemonade.API.Controllers;
 
@@ -10,10 +13,12 @@ namespace OrionLemonade.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly DbContext _dbContext;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, DbContext dbContext)
     {
         _authService = authService;
+        _dbContext = dbContext;
     }
 
     [HttpPost("login")]
@@ -38,13 +43,26 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpGet("me")]
-    public ActionResult GetCurrentUser()
+    public async Task<ActionResult> GetCurrentUser(CancellationToken cancellationToken)
     {
-        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        var login = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
-        var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var login = User.FindFirst(ClaimTypes.Name)?.Value;
+        var role = User.FindFirst(ClaimTypes.Role)?.Value;
         var scope = User.FindFirst("scope")?.Value;
 
-        return Ok(new { userId, login, role, scope });
+        var branches = new List<object>();
+        if (int.TryParse(userIdStr, out var userId))
+        {
+            var userBranches = await _dbContext.Set<UserBranch>()
+                .Include(ub => ub.Branch)
+                .Where(ub => ub.UserId == userId)
+                .ToListAsync(cancellationToken);
+
+            branches = userBranches
+                .Select(ub => (object)new { branchId = ub.BranchId, branchName = ub.Branch!.Name })
+                .ToList();
+        }
+
+        return Ok(new { userId = userIdStr, login, role, scope, branches });
     }
 }

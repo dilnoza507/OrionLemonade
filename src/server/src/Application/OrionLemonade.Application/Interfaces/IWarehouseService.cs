@@ -15,6 +15,7 @@ public interface IWarehouseService
     Task<IEnumerable<IngredientReceiptDto>> GetReceiptsAsync(int? branchId = null, DateTime? from = null, DateTime? to = null, CancellationToken cancellationToken = default);
     Task<IngredientReceiptDto?> GetReceiptByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<IngredientReceiptDto> CreateReceiptAsync(CreateIngredientReceiptDto dto, int userId, CancellationToken cancellationToken = default);
+    Task<IngredientReceiptDto?> UpdateReceiptAsync(int id, UpdateIngredientReceiptDto dto, CancellationToken cancellationToken = default);
     Task<bool> DeleteReceiptAsync(int id, CancellationToken cancellationToken = default);
 
     // Write-offs

@@ -7,6 +7,7 @@ import {
 } from '../api/expenses';
 import { getBranches } from '../api/branches';
 import { getExchangeRate } from '../api/exchangeRates';
+import { useBranchAccess } from '../hooks/useBranchAccess';
 
 const currencyLabels = { TJS: 'TJS', USD: 'USD' };
 const sourceLabels = { Manual: 'Вручную', AutoReceipt: 'Авто (поступление)', AutoPayroll: 'Авто (зарплата)' };
@@ -17,6 +18,7 @@ const textClass = "text-[hsl(var(--foreground))]";
 const mutedClass = "text-[hsl(var(--muted-foreground))]";
 
 export default function ExpensesPage() {
+  const { isAllBranches, filterBranches, getDefaultBranchId } = useBranchAccess();
   const [expenses, setExpenses] = useState([]);
   const [summary, setSummary] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -49,10 +51,12 @@ export default function ExpensesPage() {
         getExpenseCategories(),
         getExpensesSummary()
       ]);
-      setBranches(branchesData.filter(b => b.status === 'Active'));
+      const activeBranches = branchesData.filter(b => b.status === 'Active');
+      const allowed = filterBranches(activeBranches);
+      setBranches(allowed);
+      setSelectedBranch(getDefaultBranchId(allowed));
       setCategories(categoriesData);
       setSummary(summaryData);
-      await loadExpenses();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -156,10 +160,11 @@ export default function ExpensesPage() {
           <select
             value={selectedBranch}
             onChange={e => setSelectedBranch(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]"
+            disabled={!isAllBranches && branches.length <= 1}
+            className="px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))] disabled:opacity-70"
           >
-            <option value="">Все филиалы</option>
-            <option value="0">Общие расходы</option>
+            {isAllBranches && <option value="">Все филиалы</option>}
+            {isAllBranches && <option value="0">Общие расходы</option>}
             {branches.map(b => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}

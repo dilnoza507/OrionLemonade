@@ -27,6 +27,7 @@ export const useAuthStore = create(
               login: userInfo.login,
               role: userInfo.role,
               scope: userInfo.scope,
+              branches: userInfo.branches ?? [],
             },
             isAuthenticated: true,
             isLoading: false,

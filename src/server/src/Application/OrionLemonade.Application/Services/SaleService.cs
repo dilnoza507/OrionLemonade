@@ -142,6 +142,7 @@ public class SaleService : ISaleService
     public async Task<SaleDto?> UpdateSaleAsync(int id, UpdateSaleDto dto)
     {
         var sale = await _context.Set<Sale>()
+            .Include(s => s.Items)
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (sale is null) return null;
@@ -153,6 +154,35 @@ public class SaleService : ISaleService
         sale.PaymentDueDate = dto.PaymentDueDate;
         sale.Notes = dto.Notes;
         sale.UpdatedAt = DateTime.UtcNow;
+
+        // Replace items if provided
+        if (dto.Items.Count > 0)
+        {
+            _context.Set<SaleItem>().RemoveRange(sale.Items);
+
+            var exchangeRate = await GetCurrentExchangeRateAsync();
+            decimal total = 0;
+            foreach (var itemDto in dto.Items)
+            {
+                var itemTotal = itemDto.Quantity * itemDto.UnitPriceTjs;
+                _context.Set<SaleItem>().Add(new SaleItem
+                {
+                    SaleId = sale.Id,
+                    RecipeId = itemDto.RecipeId,
+                    Quantity = itemDto.Quantity,
+                    UnitPriceTjs = itemDto.UnitPriceTjs,
+                    TotalTjs = itemTotal,
+                    UnitCostUsd = 0,
+                    UnitCostTjs = 0,
+                    ExchangeRate = exchangeRate,
+                    CreatedAt = DateTime.UtcNow
+                });
+                total += itemTotal;
+            }
+
+            sale.TotalTjs = total;
+            sale.DebtTjs = total - sale.PaidTjs;
+        }
 
         await _context.SaveChangesAsync();
 

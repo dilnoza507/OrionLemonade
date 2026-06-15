@@ -37,3 +37,17 @@ public class CreateIngredientReceiptDto
     public string? DocumentNumber { get; set; }
     public string? Notes { get; set; }
 }
+
+public class UpdateIngredientReceiptDto
+{
+    public int BranchId { get; set; }
+    public int IngredientId { get; set; }
+    public int? SupplierId { get; set; }
+    public decimal Quantity { get; set; }
+    public BaseUnit Unit { get; set; }
+    public decimal UnitPrice { get; set; }
+    public Currency Currency { get; set; }
+    public DateTime ReceiptDate { get; set; }
+    public string? DocumentNumber { get; set; }
+    public string? Notes { get; set; }
+}

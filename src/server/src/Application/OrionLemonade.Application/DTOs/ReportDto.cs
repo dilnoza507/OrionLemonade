@@ -45,7 +45,7 @@ public class PayrollReportItem
     public int EmployeeId { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
     public string Position { get; set; } = string.Empty;
-    public int DaysWorked { get; set; }
+    public decimal DaysWorked { get; set; }
     public decimal BaseSalary { get; set; }
     public decimal Advance { get; set; }
     public decimal Bonus { get; set; }

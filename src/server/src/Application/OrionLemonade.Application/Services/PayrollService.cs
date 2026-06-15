@@ -8,6 +8,8 @@ namespace OrionLemonade.Application.Services;
 
 public class PayrollService : IPayrollService
 {
+    private const decimal HoursPerWorkday = 8m;
+
     private readonly DbContext _context;
 
     public PayrollService(DbContext context)
@@ -380,7 +382,7 @@ public class PayrollService : IPayrollService
         decimal dailyPayTotal = 0;
         if (timesheets.Any() && dailyRate > 0)
         {
-            var daysWorked = timesheets.Count;
+            var daysWorked = timesheets.Sum(t => t.HoursWorked) / HoursPerWorkday;
 
             if (daysWorked > 0)
             {

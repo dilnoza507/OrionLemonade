@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiDelete } from './client';
+import { apiGet, apiPost, apiPut, apiDelete } from './client';
 
 // Stock
 export async function getAllStock() {
@@ -38,6 +38,10 @@ export async function getReceipt(id) {
 
 export async function createReceipt(data) {
   return apiPost('/warehouse/receipts', data);
+}
+
+export async function updateReceipt(id, data) {
+  return apiPut(`/warehouse/receipts/${id}`, data);
 }
 
 export async function deleteReceipt(id) {

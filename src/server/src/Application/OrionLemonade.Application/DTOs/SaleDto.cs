@@ -111,6 +111,14 @@ public class UpdateSaleDto
     public PaymentMethod PaymentMethod { get; set; }
     public DateTime? PaymentDueDate { get; set; }
     public string? Notes { get; set; }
+    public List<UpdateSaleItemDto> Items { get; set; } = new();
+}
+
+public class UpdateSaleItemDto
+{
+    public int RecipeId { get; set; }
+    public int Quantity { get; set; }
+    public decimal UnitPriceTjs { get; set; }
 }
 
 public class CreatePaymentDto

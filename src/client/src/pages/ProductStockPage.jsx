@@ -3,6 +3,7 @@ import { Package, Plus, ArrowRightLeft, Trash2, X, TrendingDown, History, Buildi
 import { getStocks, getStockSummary, getMovements, writeOffProduct, transferProduct } from '../api/productStock';
 import { getRecipes } from '../api/recipes';
 import { getBranches } from '../api/branches';
+import { useBranchAccess } from '../hooks/useBranchAccess';
 
 const operationTypeLabels = {
   Production: 'Производство',
@@ -29,6 +30,7 @@ const textClass = "text-[hsl(var(--foreground))]";
 const mutedClass = "text-[hsl(var(--muted-foreground))]";
 
 export default function ProductStockPage() {
+  const { isAllBranches, filterBranches, getDefaultBranchId } = useBranchAccess();
   const [summary, setSummary] = useState([]);
   const [movements, setMovements] = useState([]);
   const [recipes, setRecipes] = useState([]);
@@ -61,7 +63,10 @@ export default function ProductStockPage() {
         getStockSummary()
       ]);
       setRecipes(recipesData.filter(r => r.status === 'Active'));
-      setBranches(branchesData.filter(b => b.status === 'Active'));
+      const activeBranches = branchesData.filter(b => b.status === 'Active');
+      const allowed = filterBranches(activeBranches);
+      setBranches(allowed);
+      setSelectedBranch(getDefaultBranchId(allowed));
       setSummary(summaryData);
     } catch (err) {
       setError(err.message);
@@ -192,9 +197,10 @@ export default function ProductStockPage() {
           <select
             value={selectedBranch}
             onChange={e => setSelectedBranch(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]"
+            disabled={!isAllBranches && branches.length <= 1}
+            className="px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))] disabled:opacity-70"
           >
-            <option value="">Все филиалы</option>
+            {isAllBranches && <option value="">Все филиалы</option>}
             {branches.map(b => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}

@@ -1,7 +1,7 @@
 import { apiGet } from './client';
 
 // Get dashboard summary data
-export async function getDashboardSummary() {
+export async function getDashboardSummary(branchId = null) {
   // Get current month range
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
@@ -10,6 +10,8 @@ export async function getDashboardSummary() {
   // Get last month range for comparison
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
   const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+
+  const branch = branchId ? `&branchId=${branchId}` : '';
 
   // Fetch all data in parallel
   const [
@@ -20,12 +22,12 @@ export async function getDashboardSummary() {
     recentProductions,
     recentReceipts
   ] = await Promise.all([
-    apiGet(`/sales?dateFrom=${startOfMonth}&dateTo=${endOfMonth}`).catch(() => []),
-    apiGet(`/sales?dateFrom=${startOfLastMonth}&dateTo=${endOfLastMonth}`).catch(() => []),
-    apiGet('/expenses/summary').catch(() => []),
-    apiGet('/warehouse/stock/low').catch(() => []),
-    apiGet('/production').catch(() => []),
-    apiGet('/warehouse/receipts').catch(() => [])
+    apiGet(`/sales?dateFrom=${startOfMonth}&dateTo=${endOfMonth}${branch}`).catch(() => []),
+    apiGet(`/sales?dateFrom=${startOfLastMonth}&dateTo=${endOfLastMonth}${branch}`).catch(() => []),
+    apiGet(`/expenses/summary${branchId ? `?branchId=${branchId}` : ''}`).catch(() => []),
+    apiGet(`/warehouse/stock/low${branchId ? `?branchId=${branchId}` : ''}`).catch(() => []),
+    apiGet(`/production${branchId ? `?branchId=${branchId}` : ''}`).catch(() => []),
+    apiGet(`/warehouse/receipts${branchId ? `?branchId=${branchId}` : ''}`).catch(() => [])
   ]);
 
   // Calculate sales revenue this month

@@ -122,6 +122,8 @@ export default function EmployeesPage() {
                 <th className="text-left px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Должность</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Филиал</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Телефон</th>
+                <th className="text-left px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Дата рождения</th>
+                <th className="text-left px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Адрес</th>
                 <th className="text-right px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Ставка/день</th>
                 <th className="text-right px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Оклад/мес</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Статус</th>
@@ -148,6 +150,12 @@ export default function EmployeesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-[hsl(var(--muted-foreground))]">{employee.phone || '-'}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-[hsl(var(--muted-foreground))]">{employee.dateOfBirth || '-'}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-[hsl(var(--muted-foreground))]">{employee.address || '-'}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <span className="text-sm font-medium text-[hsl(var(--foreground))]">{employee.dailyRate ? employee.dailyRate.toLocaleString() : '-'}</span>
@@ -190,6 +198,8 @@ function EmployeeModal({ employee, branches, onSave, onClose }) {
     position: employee?.position || '',
     phone: employee?.phone || '',
     hireDate: employee?.hireDate || '',
+    dateOfBirth: employee?.dateOfBirth || '',
+    address: employee?.address || '',
     dailyRate: employee?.dailyRate || '',
     monthlyRate: employee?.monthlyRate || '',
     branchId: employee?.branchId || '',
@@ -203,6 +213,8 @@ function EmployeeModal({ employee, branches, onSave, onClose }) {
       position: formData.position || null,
       phone: formData.phone || null,
       hireDate: formData.hireDate || null,
+      dateOfBirth: formData.dateOfBirth || null,
+      address: formData.address || null,
       dailyRate: formData.dailyRate ? parseFloat(formData.dailyRate) : null,
       monthlyRate: formData.monthlyRate ? parseFloat(formData.monthlyRate) : null,
       branchId: formData.branchId ? parseInt(formData.branchId) : null,
@@ -247,6 +259,16 @@ function EmployeeModal({ employee, branches, onSave, onClose }) {
             <div>
               <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Дата найма</label>
               <input type="date" value={formData.hireDate} onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })} className={inputClass} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Дата рождения</label>
+              <input type="date" value={formData.dateOfBirth} onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })} className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-1">Адрес</label>
+              <input type="text" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className={inputClass} placeholder="г. Душанбе, ул. ..." />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">

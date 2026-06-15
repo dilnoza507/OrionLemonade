@@ -183,6 +183,59 @@ public class WarehouseService : IWarehouseService
         return (await GetReceiptByIdAsync(receipt.Id, cancellationToken))!;
     }
 
+    public async Task<IngredientReceiptDto?> UpdateReceiptAsync(int id, UpdateIngredientReceiptDto dto, CancellationToken cancellationToken = default)
+    {
+        var receipt = await _dbContext.Set<IngredientReceipt>()
+            .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+
+        if (receipt is null) return null;
+
+        // Reverse old stock effect
+        await UpdateStockAsync(receipt.BranchId, receipt.IngredientId, -receipt.Quantity, receipt.Unit, cancellationToken);
+
+        // Update receipt fields
+        receipt.BranchId = dto.BranchId;
+        receipt.IngredientId = dto.IngredientId;
+        receipt.SupplierId = dto.SupplierId;
+        receipt.Quantity = dto.Quantity;
+        receipt.Unit = dto.Unit;
+        receipt.UnitPrice = dto.UnitPrice;
+        receipt.TotalPrice = dto.Quantity * dto.UnitPrice;
+        receipt.Currency = dto.Currency;
+        receipt.ReceiptDate = dto.ReceiptDate;
+        receipt.DocumentNumber = dto.DocumentNumber;
+        receipt.Notes = dto.Notes;
+        receipt.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Apply new stock effect
+        await UpdateStockAsync(dto.BranchId, dto.IngredientId, dto.Quantity, dto.Unit, cancellationToken);
+
+        // Update related movement record
+        var movement = await _dbContext.Set<IngredientMovement>()
+            .FirstOrDefaultAsync(m => m.ReferenceId == id && m.ReferenceType == "Receipt", cancellationToken);
+
+        if (movement != null)
+        {
+            var stock = await _dbContext.Set<IngredientStock>()
+                .FirstAsync(s => s.BranchId == dto.BranchId && s.IngredientId == dto.IngredientId, cancellationToken);
+
+            movement.BranchId = dto.BranchId;
+            movement.IngredientId = dto.IngredientId;
+            movement.Quantity = dto.Quantity;
+            movement.Unit = dto.Unit;
+            movement.BalanceAfter = stock.Quantity;
+            movement.MovementDate = dto.ReceiptDate;
+            movement.Notes = dto.Notes;
+            movement.UpdatedAt = DateTime.UtcNow;
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return await GetReceiptByIdAsync(receipt.Id, cancellationToken);
+    }
+
     public async Task<bool> DeleteReceiptAsync(int id, CancellationToken cancellationToken = default)
     {
         var receipt = await _dbContext.Set<IngredientReceipt>()

@@ -10,6 +10,7 @@ import {
 } from '../api/payroll';
 import { getBranches } from '../api/branches';
 import { getEmployees } from '../api/employees';
+import { useBranchAccess } from '../hooks/useBranchAccess';
 
 const statusColors = {
   'Черновик': 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
@@ -26,7 +27,16 @@ const inputClass = "w-full px-3 py-2 rounded-lg border border-[hsl(var(--border)
 const buttonPrimary = "px-4 py-2 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary))]/90 disabled:opacity-50";
 const buttonSecondary = "px-4 py-2 rounded-lg border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]";
 
+const HOURS_PER_WORKDAY = 8;
+
+function formatWorkedDays(days) {
+  if (!days) return '-';
+  if (Number.isInteger(days)) return days;
+  return days.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+}
+
 export default function PayrollPage() {
+  const { isAllBranches, filterBranches, getDefaultBranchId } = useBranchAccess();
   const [activeTab, setActiveTab] = useState('calculations');
   const [branches, setBranches] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -49,7 +59,10 @@ export default function PayrollPage() {
         getBranches(),
         getEmployees()
       ]);
-      setBranches(branchesData.filter(b => b.status === 'Active'));
+      const activeBranches = branchesData.filter(b => b.status === 'Active');
+      const allowed = filterBranches(activeBranches);
+      setBranches(allowed);
+      setSelectedBranch(getDefaultBranchId(allowed));
       setEmployees(employeesData.filter(e => e.status === 'Active'));
     } catch (err) {
       setError(err.message);
@@ -109,8 +122,8 @@ export default function PayrollPage() {
 
       {/* Filters */}
       <div className="flex gap-3 items-center">
-        <select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)} className="px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
-          <option value="">Все филиалы</option>
+        <select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)} disabled={!isAllBranches && branches.length <= 1} className="px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] disabled:opacity-70">
+          {isAllBranches && <option value="">Все филиалы</option>}
           {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
         {activeTab !== 'calculations' && (
@@ -629,7 +642,7 @@ function TimesheetsTab({ branches, employees, selectedBranch, selectedEmployee, 
   // Calculate totals for each employee
   const getEmployeeTotals = (emp) => {
     const hours = Object.values(timesheetMap[emp.id] || {}).reduce((sum, h) => sum + h, 0);
-    const daysWorked = Object.keys(timesheetMap[emp.id] || {}).length;
+    const daysWorked = hours / HOURS_PER_WORKDAY;
     const dailyRate = emp.dailyRate || 0;
     const sumSalary = daysWorked * dailyRate;
     const advance = advanceMap[emp.id] || 0;
@@ -808,7 +821,7 @@ function TimesheetsTab({ branches, employees, selectedBranch, selectedEmployee, 
                       );
                     })}
                     <td className={`p-2 text-center font-bold ${textClass} border-l border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30`}>{totals.hours || '-'}</td>
-                    <td className={`p-2 text-center font-bold ${textClass} bg-[hsl(var(--muted))]/30`}>{totals.daysWorked || '-'}</td>
+                    <td className={`p-2 text-center font-bold ${textClass} bg-[hsl(var(--muted))]/30`}>{formatWorkedDays(totals.daysWorked)}</td>
                     <td className={`p-2 text-right ${textClass} bg-[hsl(var(--warning))]/10`}>{totals.advance > 0 ? totals.advance.toLocaleString() : '-'}</td>
                     <td className={`p-2 text-right font-medium text-green-600 bg-green-100/50 dark:bg-green-900/20`}>{totals.bonus > 0 ? `+${totals.bonus.toLocaleString()}` : '-'}</td>
                     <td className={`p-2 text-right font-medium text-[hsl(var(--destructive))] bg-[hsl(var(--destructive))]/10`}>{totals.penalty > 0 ? `-${totals.penalty.toLocaleString()}` : '-'}</td>
@@ -834,7 +847,7 @@ function TimesheetsTab({ branches, employees, selectedBranch, selectedEmployee, 
                   );
                 })}
                 <td className={`p-2 text-center ${textClass} bg-[hsl(var(--primary))]/10 border-l border-[hsl(var(--border))]`}>{grandTotalHours}</td>
-                <td className={`p-2 text-center ${textClass} bg-[hsl(var(--primary))]/10`}>{grandTotalDays}</td>
+                <td className={`p-2 text-center ${textClass} bg-[hsl(var(--primary))]/10`}>{formatWorkedDays(grandTotalDays)}</td>
                 <td className={`p-2 text-right ${textClass} bg-[hsl(var(--warning))]/10`}>{grandTotalAdvance.toLocaleString()}</td>
                 <td className={`p-2 text-right text-green-600 bg-green-100/50 dark:bg-green-900/20`}>+{grandTotalBonus.toLocaleString()}</td>
                 <td className={`p-2 text-right text-[hsl(var(--destructive))] bg-[hsl(var(--destructive))]/10`}>-{grandTotalPenalty.toLocaleString()}</td>

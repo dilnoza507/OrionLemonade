@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Package, TrendingDown, TrendingUp, ArrowRightLeft, AlertTriangle, Plus, Trash2, X } from 'lucide-react';
-import { getAllStock, getStockByBranch, getLowStock, getStockSummary, getReceipts, createReceipt, deleteReceipt, getWriteOffs, createWriteOff, deleteWriteOff, getMovements } from '../api/warehouse';
+import { Package, TrendingDown, TrendingUp, ArrowRightLeft, AlertTriangle, Plus, Trash2, Pencil, X } from 'lucide-react';
+import { getAllStock, getStockByBranch, getLowStock, getStockSummary, getReceipts, createReceipt, updateReceipt, deleteReceipt, getWriteOffs, createWriteOff, deleteWriteOff, getMovements } from '../api/warehouse';
 import { getIngredients } from '../api/ingredients';
 import { getBranches } from '../api/branches';
 import { getSuppliers } from '../api/suppliers';
+import { useBranchAccess } from '../hooks/useBranchAccess';
 
 const unitLabels = { Kg: 'кг', L: 'л', Pcs: 'шт' };
 const currencyLabels = { Uzs: 'UZS', Usd: 'USD', Tjs: 'TJS' };
@@ -15,6 +16,7 @@ const textClass = "text-[hsl(var(--foreground))]";
 const mutedClass = "text-[hsl(var(--muted-foreground))]";
 
 export default function MaterialsPage() {
+  const { isAllBranches, filterBranches, getDefaultBranchId } = useBranchAccess();
   const [activeTab, setActiveTab] = useState('stock');
   const [stock, setStock] = useState([]);
   const [receipts, setReceipts] = useState([]);
@@ -32,6 +34,7 @@ export default function MaterialsPage() {
   const [error, setError] = useState(null);
 
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [editingReceipt, setEditingReceipt] = useState(null);
   const [showWriteOffModal, setShowWriteOffModal] = useState(false);
 
   useEffect(() => {
@@ -56,11 +59,13 @@ export default function MaterialsPage() {
         getLowStock()
       ]);
       setIngredients(ingredientsData.filter(i => i.status === 'Active'));
-      setBranches(branchesData.filter(b => b.status === 'Active'));
+      const activeBranches = branchesData.filter(b => b.status === 'Active');
+      const allowed = filterBranches(activeBranches);
+      setBranches(allowed);
+      setSelectedBranch(getDefaultBranchId(allowed));
       setSuppliers(suppliersData.filter(s => s.status === 'Active'));
       setSummary(summaryData);
       setLowStock(lowStockData);
-      await loadStock();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -233,9 +238,10 @@ export default function MaterialsPage() {
           <select
             value={selectedBranch}
             onChange={e => setSelectedBranch(e.target.value)}
-            className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg px-3 py-2 text-[hsl(var(--foreground))]"
+            disabled={!isAllBranches && branches.length <= 1}
+            className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg px-3 py-2 text-[hsl(var(--foreground))] disabled:opacity-70"
           >
-            <option value="">Все филиалы</option>
+            {isAllBranches && <option value="">Все филиалы</option>}
             {branches.map(b => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
@@ -332,9 +338,14 @@ export default function MaterialsPage() {
                   <td className="p-4 text-right text-[hsl(var(--success))]">{item.totalPrice} {currencyLabels[item.currency] || item.currency}</td>
                   <td className={`p-4 ${mutedClass}`}>{item.documentNumber || '-'}</td>
                   <td className="p-4 text-center">
-                    <button onClick={() => handleDeleteReceipt(item.id)} className="text-[hsl(var(--destructive))] hover:opacity-80">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button onClick={() => setEditingReceipt(item)} className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDeleteReceipt(item.id)} className="text-[hsl(var(--destructive))] hover:opacity-80">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -430,7 +441,7 @@ export default function MaterialsPage() {
         )}
       </div>
 
-      {/* Receipt Modal */}
+      {/* Receipt Modal (create) */}
       {showReceiptModal && (
         <ReceiptModal
           ingredients={ingredients}
@@ -439,6 +450,22 @@ export default function MaterialsPage() {
           onClose={() => setShowReceiptModal(false)}
           onSave={async () => {
             setShowReceiptModal(false);
+            await loadReceipts();
+            await loadStock();
+          }}
+        />
+      )}
+
+      {/* Receipt Modal (edit) */}
+      {editingReceipt && (
+        <ReceiptModal
+          ingredients={ingredients}
+          branches={branches}
+          suppliers={suppliers}
+          initialData={editingReceipt}
+          onClose={() => setEditingReceipt(null)}
+          onSave={async () => {
+            setEditingReceipt(null);
             await loadReceipts();
             await loadStock();
           }}
@@ -462,18 +489,21 @@ export default function MaterialsPage() {
   );
 }
 
-function ReceiptModal({ ingredients, branches, suppliers, onClose, onSave }) {
+function ReceiptModal({ ingredients, branches, suppliers, initialData, onClose, onSave }) {
+  const isEdit = !!initialData;
   const [form, setForm] = useState({
-    branchId: '',
-    ingredientId: '',
-    supplierId: '',
-    quantity: '',
-    unit: 'Kg',
-    unitPrice: '',
-    currency: 'Uzs',
-    receiptDate: new Date().toISOString().split('T')[0],
-    documentNumber: '',
-    notes: ''
+    branchId: initialData ? String(initialData.branchId) : '',
+    ingredientId: initialData ? String(initialData.ingredientId) : '',
+    supplierId: initialData?.supplierId ? String(initialData.supplierId) : '',
+    quantity: initialData ? String(initialData.quantity) : '',
+    unit: initialData?.unit ?? 'Kg',
+    unitPrice: initialData ? String(initialData.unitPrice) : '',
+    currency: initialData?.currency ?? 'Uzs',
+    receiptDate: initialData
+      ? new Date(initialData.receiptDate).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0],
+    documentNumber: initialData?.documentNumber ?? '',
+    notes: initialData?.notes ?? ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -486,7 +516,7 @@ function ReceiptModal({ ingredients, branches, suppliers, onClose, onSave }) {
     }
     setLoading(true);
     try {
-      await createReceipt({
+      const payload = {
         ...form,
         branchId: parseInt(form.branchId),
         ingredientId: parseInt(form.ingredientId),
@@ -494,7 +524,12 @@ function ReceiptModal({ ingredients, branches, suppliers, onClose, onSave }) {
         quantity: parseFloat(form.quantity),
         unitPrice: parseFloat(form.unitPrice),
         receiptDate: new Date(form.receiptDate).toISOString()
-      });
+      };
+      if (isEdit) {
+        await updateReceipt(initialData.id, payload);
+      } else {
+        await createReceipt(payload);
+      }
       onSave();
     } catch (err) {
       setError(err.message);
@@ -509,7 +544,7 @@ function ReceiptModal({ ingredients, branches, suppliers, onClose, onSave }) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-[hsl(var(--card))] rounded-xl p-6 w-full max-w-lg shadow-xl">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">Добавить приход</h2>
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">{isEdit ? 'Редактировать приход' : 'Добавить приход'}</h2>
           <button onClick={onClose} className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
             <X className="w-6 h-6" />
           </button>
@@ -592,7 +627,7 @@ function ReceiptModal({ ingredients, branches, suppliers, onClose, onSave }) {
           <div className="flex justify-end gap-3 pt-4">
             <button type="button" onClick={onClose} className="px-4 py-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">Отмена</button>
             <button type="submit" disabled={loading} className="px-6 py-2 bg-[hsl(var(--success))] hover:opacity-90 text-white rounded-lg font-medium disabled:opacity-50">
-              {loading ? 'Сохранение...' : 'Сохранить'}
+              {loading ? 'Сохранение...' : isEdit ? 'Сохранить изменения' : 'Сохранить'}
             </button>
           </div>
         </form>
