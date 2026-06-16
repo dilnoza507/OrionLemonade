@@ -152,7 +152,7 @@ export default function EmployeesPage() {
                       <span className="text-sm text-[hsl(var(--muted-foreground))]">{employee.phone || '-'}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-[hsl(var(--muted-foreground))]">{employee.dateOfBirth || '-'}</span>
+                      <span className="text-sm text-[hsl(var(--muted-foreground))]">{employee.dateOfBirth ? employee.dateOfBirth.split('-').reverse().join('.') : '-'}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-[hsl(var(--muted-foreground))]">{employee.address || '-'}</span>
