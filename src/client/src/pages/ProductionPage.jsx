@@ -386,8 +386,8 @@ function CreateBatchModal({ recipes, branches, onClose, onSave }) {
       setIngredientConsumptions(data.map(c => ({
         ingredientId: c.ingredientId,
         ingredientName: c.ingredientName,
-        plannedQuantity: c.quantity,
-        actualQuantity: c.quantity.toString(),
+        plannedQuantity: c.plannedQuantity,
+        actualQuantity: c.plannedQuantity.toString(),
         unit: c.unit
       })));
     } catch (err) {

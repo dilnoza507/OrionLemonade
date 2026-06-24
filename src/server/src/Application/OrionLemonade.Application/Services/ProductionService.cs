@@ -365,6 +365,7 @@ public class ProductionService : IProductionService
             result.Add(new BatchIngredientConsumptionInputDto
             {
                 IngredientId = ingredient.IngredientId,
+                IngredientName = ingredient.Ingredient?.Name,
                 PlannedQuantity = ingredient.Quantity * ratio,
                 ActualQuantity = 0,
                 Unit = ingredient.Unit
@@ -377,6 +378,7 @@ public class ProductionService : IProductionService
             result.Add(new BatchIngredientConsumptionInputDto
             {
                 IngredientId = packaging.IngredientId,
+                IngredientName = packaging.Ingredient?.Name,
                 PlannedQuantity = packaging.Quantity * ratio,
                 ActualQuantity = 0,
                 Unit = packaging.Unit

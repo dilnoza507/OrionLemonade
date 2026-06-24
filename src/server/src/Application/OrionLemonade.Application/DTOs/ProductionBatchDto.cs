@@ -74,6 +74,7 @@ public class BatchIngredientConsumptionDto
 public class BatchIngredientConsumptionInputDto
 {
     public int IngredientId { get; set; }
+    public string? IngredientName { get; set; }
     public decimal PlannedQuantity { get; set; }
     public decimal ActualQuantity { get; set; }
     public BaseUnit Unit { get; set; }
