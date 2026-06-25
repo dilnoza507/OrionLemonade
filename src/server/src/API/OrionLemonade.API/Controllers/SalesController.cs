@@ -77,9 +77,11 @@ public class SalesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteSale(int id)
     {
+        var sale = await _saleService.GetSaleByIdAsync(id);
+        if (sale is null) return NotFound();
         var deleted = await _saleService.DeleteSaleAsync(id);
         if (!deleted)
-            return NotFound();
+            return BadRequest(new { message = "Нельзя удалить отгруженную или оплаченную продажу" });
         return NoContent();
     }
 
@@ -112,6 +114,16 @@ public class SalesController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    [HttpPost("{id}/unship")]
+    public async Task<ActionResult<SaleDto>> UnshipSale(int id)
+    {
+        var userId = GetUserId();
+        var sale = await _saleService.RevertShipAsync(id, userId);
+        if (sale is null)
+            return BadRequest(new { message = "Нельзя отменить отгрузку для этой продажи" });
+        return Ok(sale);
     }
 
     [HttpPost("{id}/cancel")]

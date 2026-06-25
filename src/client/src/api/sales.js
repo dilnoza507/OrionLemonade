@@ -44,6 +44,10 @@ export async function cancelSale(id) {
   return apiPost(`/sales/${id}/cancel`);
 }
 
+export async function unshipSale(id) {
+  return apiPost(`/sales/${id}/unship`);
+}
+
 // Payments
 export async function addPayment(saleId, data) {
   return apiPost(`/sales/${saleId}/payments`, data);

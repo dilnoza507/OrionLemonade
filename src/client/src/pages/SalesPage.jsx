@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ShoppingCart, Plus, Edit2, Trash2, X, Eye, CheckCircle, Truck, Ban, CreditCard, DollarSign, Clock, Package, FileText, Settings2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getSales, createSale, updateSale, deleteSale, getSaleDetail, confirmSale, shipSale, cancelSale, addPayment, deletePayment, getSalesSummary } from '../api/sales';
+import { getSales, createSale, updateSale, deleteSale, getSaleDetail, confirmSale, shipSale, cancelSale, unshipSale, addPayment, deletePayment, getSalesSummary } from '../api/sales';
 import { getRecipes } from '../api/recipes';
 import { getBranches } from '../api/branches';
 import { getClients } from '../api/clients';
@@ -1140,6 +1140,16 @@ function SaleDetailModal({ sale, onClose, onRefresh, setError }) {
     }
   }
 
+  async function handleUnship() {
+    if (!confirm('Отменить отгрузку? Продукция вернётся на склад, статус изменится на "Подтверждено".')) return;
+    try {
+      await unshipSale(sale.id);
+      await onRefresh();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function handleCancel() {
     if (!confirm('Отменить продажу?')) return;
     try {
@@ -1184,6 +1194,7 @@ function SaleDetailModal({ sale, onClose, onRefresh, setError }) {
 
   const canConfirm = sale.statusName === 'Черновик';
   const canShip = sale.statusName === 'Подтверждено';
+  const canUnship = sale.statusName === 'Отгружено';
   const canCancel = ['Черновик', 'Подтверждено'].includes(sale.statusName);
   const canAddPayment = ['Подтверждено', 'Отгружено', 'Частично оплачено'].includes(sale.statusName);
 
@@ -1226,6 +1237,15 @@ function SaleDetailModal({ sale, onClose, onRefresh, setError }) {
               >
                 <Truck className="w-4 h-4" />
                 Отгрузить
+              </button>
+            )}
+            {canUnship && (
+              <button
+                onClick={handleUnship}
+                className="px-4 py-2 border border-[hsl(var(--warning))] text-[hsl(var(--warning))] rounded-lg flex items-center gap-2 hover:bg-[hsl(var(--warning))]/10"
+              >
+                <Truck className="w-4 h-4" />
+                Отменить отгрузку
               </button>
             )}
             {canAddPayment && (

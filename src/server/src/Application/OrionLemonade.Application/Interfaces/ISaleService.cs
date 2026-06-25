@@ -15,6 +15,7 @@ public interface ISaleService
     // Sale operations
     Task<SaleDto?> ConfirmSaleAsync(int id, int userId);
     Task<SaleDto?> ShipSaleAsync(int id, int userId);
+    Task<SaleDto?> RevertShipAsync(int id, int userId);
     Task<bool> CancelSaleAsync(int id);
 
     // Payments

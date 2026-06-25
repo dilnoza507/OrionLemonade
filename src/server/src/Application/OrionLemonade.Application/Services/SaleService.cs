@@ -197,7 +197,8 @@ public class SaleService : ISaleService
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (sale is null) return false;
-        if (sale.Status != SaleStatus.Draft) return false;
+        if (sale.Status == SaleStatus.Shipped || sale.Status == SaleStatus.Paid ||
+            sale.Status == SaleStatus.PartiallyPaid) return false;
 
         _context.Set<Payment>().RemoveRange(sale.Payments);
         _context.Set<SaleItem>().RemoveRange(sale.Items);
@@ -255,6 +256,43 @@ public class SaleService : ISaleService
 
         await _context.SaveChangesAsync();
 
+        return await GetSaleByIdAsync(id);
+    }
+
+    public async Task<SaleDto?> RevertShipAsync(int id, int userId)
+    {
+        var sale = await _context.Set<Sale>()
+            .Include(s => s.Items)
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+        if (sale is null || sale.Status != SaleStatus.Shipped) return null;
+
+        // Return each item's quantity back to stock
+        foreach (var item in sale.Items)
+        {
+            // Find the most recent stock lot for this recipe in this branch
+            var stock = await _context.Set<ProductStock>()
+                .Where(s => s.BranchId == sale.BranchId && s.RecipeId == item.RecipeId)
+                .OrderByDescending(s => s.ProductionDate)
+                .FirstOrDefaultAsync();
+
+            if (stock != null)
+            {
+                stock.Quantity += item.Quantity;
+                stock.UpdatedAt = DateTime.UtcNow;
+            }
+
+            // Remove the original sale movement record
+            var saleMovements = await _context.Set<ProductMovement>()
+                .Where(m => m.DocumentType == "Sale" && m.DocumentId == sale.Id && m.RecipeId == item.RecipeId)
+                .ToListAsync();
+            _context.Set<ProductMovement>().RemoveRange(saleMovements);
+        }
+
+        sale.Status = SaleStatus.Confirmed;
+        sale.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
         return await GetSaleByIdAsync(id);
     }
 
