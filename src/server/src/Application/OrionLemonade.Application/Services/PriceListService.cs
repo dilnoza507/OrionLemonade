@@ -144,7 +144,9 @@ public class PriceListService : IPriceListService
         {
             // Update existing
             existing.PriceTjs = dto.PriceTjs;
+            existing.PricePerBlockTjs = dto.PricePerBlockTjs;
             existing.MinOrderQuantity = dto.MinOrderQuantity;
+            existing.BlockSize = dto.BlockSize > 0 ? dto.BlockSize : 1;
             existing.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return (await GetPriceListItemAsync(existing.Id))!;
@@ -155,7 +157,9 @@ public class PriceListService : IPriceListService
             PriceListId = priceListId,
             RecipeId = dto.RecipeId,
             PriceTjs = dto.PriceTjs,
+            PricePerBlockTjs = dto.PricePerBlockTjs,
             MinOrderQuantity = dto.MinOrderQuantity,
+            BlockSize = dto.BlockSize > 0 ? dto.BlockSize : 1,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -174,7 +178,9 @@ public class PriceListService : IPriceListService
         if (item is null) return null;
 
         item.PriceTjs = dto.PriceTjs;
+        item.PricePerBlockTjs = dto.PricePerBlockTjs;
         item.MinOrderQuantity = dto.MinOrderQuantity;
+        item.BlockSize = dto.BlockSize > 0 ? dto.BlockSize : 1;
         item.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
@@ -284,7 +290,9 @@ public class PriceListService : IPriceListService
             RecipeName = entity.Recipe?.Name ?? string.Empty,
             ProductName = entity.Recipe?.ProductName ?? string.Empty,
             PriceTjs = entity.PriceTjs,
+            PricePerBlockTjs = entity.PricePerBlockTjs,
             MinOrderQuantity = entity.MinOrderQuantity,
+            BlockSize = entity.BlockSize,
             UpdatedAt = entity.UpdatedAt
         };
     }

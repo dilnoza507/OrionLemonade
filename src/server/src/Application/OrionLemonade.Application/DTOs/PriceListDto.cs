@@ -40,7 +40,9 @@ public class PriceListItemDto
     public string RecipeName { get; set; } = string.Empty;
     public string ProductName { get; set; } = string.Empty;
     public decimal PriceTjs { get; set; }
+    public decimal? PricePerBlockTjs { get; set; }
     public int MinOrderQuantity { get; set; }
+    public int BlockSize { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
 
@@ -64,18 +66,24 @@ public class CreatePriceListItemDto
 {
     public int RecipeId { get; set; }
     public decimal PriceTjs { get; set; }
+    public decimal? PricePerBlockTjs { get; set; }
     public int MinOrderQuantity { get; set; }
+    public int BlockSize { get; set; } = 1;
 }
 
 public class UpdatePriceListItemDto
 {
     public decimal PriceTjs { get; set; }
+    public decimal? PricePerBlockTjs { get; set; }
     public int MinOrderQuantity { get; set; }
+    public int BlockSize { get; set; } = 1;
 }
 
 public class BulkPriceListItemDto
 {
     public int RecipeId { get; set; }
     public decimal PriceTjs { get; set; }
+    public decimal? PricePerBlockTjs { get; set; }
     public int MinOrderQuantity { get; set; }
+    public int BlockSize { get; set; } = 1;
 }

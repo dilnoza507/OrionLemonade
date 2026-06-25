@@ -6,7 +6,9 @@ public class PriceListItem
     public int PriceListId { get; set; }
     public int RecipeId { get; set; }
     public decimal PriceTjs { get; set; }
+    public decimal? PricePerBlockTjs { get; set; }
     public int MinOrderQuantity { get; set; }
+    public int BlockSize { get; set; } = 1;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

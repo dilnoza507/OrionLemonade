@@ -494,7 +494,7 @@ function EditPriceListModal({ priceList, branches, onClose, onSave, setError }) 
 function PriceListDetailModal({ priceList, recipes, onClose, onRefresh, setError }) {
   const [showAddItem, setShowAddItem] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [newItem, setNewItem] = useState({ recipeId: '', priceTjs: '', minOrderQuantity: '1' });
+  const [newItem, setNewItem] = useState({ recipeId: '', priceTjs: '', pricePerBlockTjs: '', minOrderQuantity: '1', blockSize: '1' });
   const [saving, setSaving] = useState(false);
 
   const availableRecipes = recipes.filter(r => !priceList.items.some(i => i.recipeId === r.id));
@@ -508,9 +508,11 @@ function PriceListDetailModal({ priceList, recipes, onClose, onRefresh, setError
       await addPriceListItem(priceList.id, {
         recipeId: parseInt(newItem.recipeId),
         priceTjs: parseFloat(newItem.priceTjs),
-        minOrderQuantity: parseInt(newItem.minOrderQuantity) || 1
+        pricePerBlockTjs: newItem.pricePerBlockTjs ? parseFloat(newItem.pricePerBlockTjs) : null,
+        minOrderQuantity: parseInt(newItem.minOrderQuantity) || 1,
+        blockSize: parseInt(newItem.blockSize) || 1
       });
-      setNewItem({ recipeId: '', priceTjs: '', minOrderQuantity: '1' });
+      setNewItem({ recipeId: '', priceTjs: '', pricePerBlockTjs: '', minOrderQuantity: '1', blockSize: '1' });
       setShowAddItem(false);
       await onRefresh();
     } catch (err) {
@@ -527,7 +529,9 @@ function PriceListDetailModal({ priceList, recipes, onClose, onRefresh, setError
     try {
       await updatePriceListItem(item.id, {
         priceTjs: parseFloat(editingItem.priceTjs),
-        minOrderQuantity: parseInt(editingItem.minOrderQuantity) || 1
+        pricePerBlockTjs: editingItem.pricePerBlockTjs ? parseFloat(editingItem.pricePerBlockTjs) : null,
+        minOrderQuantity: parseInt(editingItem.minOrderQuantity) || 1,
+        blockSize: parseInt(editingItem.blockSize) || 1
       });
       setEditingItem(null);
       await onRefresh();
@@ -579,7 +583,7 @@ function PriceListDetailModal({ priceList, recipes, onClose, onRefresh, setError
 
           {showAddItem && (
             <form onSubmit={handleAddItem} className="mb-4 p-3 bg-[hsl(var(--muted))]/30 rounded-lg space-y-3">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-5 gap-3">
                 <select
                   value={newItem.recipeId}
                   onChange={e => setNewItem({ ...newItem, recipeId: e.target.value })}
@@ -595,7 +599,7 @@ function PriceListDetailModal({ priceList, recipes, onClose, onRefresh, setError
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="Цена (TJS)"
+                  placeholder="Цена за шт (TJS)"
                   value={newItem.priceTjs}
                   onChange={e => setNewItem({ ...newItem, priceTjs: e.target.value })}
                   className="px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
@@ -609,6 +613,31 @@ function PriceListDetailModal({ priceList, recipes, onClose, onRefresh, setError
                   onChange={e => setNewItem({ ...newItem, minOrderQuantity: e.target.value })}
                   className="px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
                 />
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Шт в блоке"
+                  value={newItem.blockSize}
+                  onChange={e => setNewItem({ ...newItem, blockSize: e.target.value })}
+                  className="px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
+                  title="Количество штук в одном блоке (упаковке)"
+                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Цена за блок (необяз.)"
+                    value={newItem.pricePerBlockTjs}
+                    onChange={e => setNewItem({ ...newItem, pricePerBlockTjs: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
+                  />
+                  {!newItem.pricePerBlockTjs && parseInt(newItem.blockSize) >= 1 && parseFloat(newItem.priceTjs) > 0 && (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[hsl(var(--muted-foreground))] pointer-events-none">
+                      авто: {(parseFloat(newItem.priceTjs) * (parseInt(newItem.blockSize) || 1)).toFixed(2)}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex gap-2">
                 <button
@@ -633,15 +662,17 @@ function PriceListDetailModal({ priceList, recipes, onClose, onRefresh, setError
             <thead>
               <tr className="border-b border-[hsl(var(--border))]">
                 <th className="text-left p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm">Продукт</th>
-                <th className="text-right p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm">Цена (TJS)</th>
+                <th className="text-right p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm">Цена за шт (TJS)</th>
                 <th className="text-right p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm">Мин. кол-во</th>
+                <th className="text-right p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm">Шт в блоке</th>
+                <th className="text-right p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm">Цена за блок (TJS)</th>
                 <th className="text-right p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm w-24">Действия</th>
               </tr>
             </thead>
             <tbody>
               {priceList.items.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-4 text-center text-[hsl(var(--muted-foreground))]">
+                  <td colSpan={6} className="p-4 text-center text-[hsl(var(--muted-foreground))]">
                     Нет позиций
                   </td>
                 </tr>
@@ -678,6 +709,46 @@ function PriceListDetailModal({ priceList, recipes, onClose, onRefresh, setError
                     </td>
                     <td className="p-2 text-right">
                       {editingItem?.id === item.id ? (
+                        <input
+                          type="number"
+                          min="1"
+                          value={editingItem.blockSize}
+                          onChange={e => setEditingItem({ ...editingItem, blockSize: e.target.value })}
+                          className="w-20 px-2 py-1 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-right"
+                        />
+                      ) : (
+                        <span className="text-[hsl(var(--foreground))]">{item.blockSize}</span>
+                      )}
+                    </td>
+                    <td className="p-2 text-right">
+                      {editingItem?.id === item.id ? (
+                        <div className="flex flex-col items-end gap-0.5">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="авто"
+                            value={editingItem.pricePerBlockTjs}
+                            onChange={e => setEditingItem({ ...editingItem, pricePerBlockTjs: e.target.value })}
+                            className="w-24 px-2 py-1 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-right"
+                          />
+                          {!editingItem.pricePerBlockTjs && (
+                            <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                              = {(parseFloat(editingItem.priceTjs || 0) * (parseInt(editingItem.blockSize) || 1)).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[hsl(var(--foreground))]">
+                          {item.pricePerBlockTjs != null
+                            ? item.pricePerBlockTjs.toFixed(2)
+                            : (item.priceTjs * (item.blockSize || 1)).toFixed(2)
+                          }
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-2 text-right">
+                      {editingItem?.id === item.id ? (
                         <div className="flex justify-end gap-1">
                           <button
                             onClick={() => handleUpdateItem(item)}
@@ -696,7 +767,7 @@ function PriceListDetailModal({ priceList, recipes, onClose, onRefresh, setError
                       ) : (
                         <div className="flex justify-end gap-1">
                           <button
-                            onClick={() => setEditingItem({ id: item.id, priceTjs: item.priceTjs.toString(), minOrderQuantity: item.minOrderQuantity.toString() })}
+                            onClick={() => setEditingItem({ id: item.id, priceTjs: item.priceTjs.toString(), pricePerBlockTjs: item.pricePerBlockTjs != null ? item.pricePerBlockTjs.toString() : '', minOrderQuantity: item.minOrderQuantity.toString(), blockSize: (item.blockSize || 1).toString() })}
                             className="p-1 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] rounded"
                           >
                             <Edit2 className="w-4 h-4" />

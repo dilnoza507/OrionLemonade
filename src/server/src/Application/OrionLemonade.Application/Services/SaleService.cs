@@ -146,7 +146,7 @@ public class SaleService : ISaleService
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (sale is null) return null;
-        if (sale.Status != SaleStatus.Draft) return null;
+        if (sale.Status == SaleStatus.Paid || sale.Status == SaleStatus.Cancelled) return null;
 
         sale.SaleDate = dto.SaleDate;
         sale.ClientId = dto.ClientId;

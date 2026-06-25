@@ -3,6 +3,7 @@ import { Package, Plus, ArrowRightLeft, Trash2, X, TrendingDown, History, Buildi
 import { getStocks, getStockSummary, getMovements, writeOffProduct, transferProduct } from '../api/productStock';
 import { getRecipes } from '../api/recipes';
 import { getBranches } from '../api/branches';
+import { getPriceLists, getPriceListDetail } from '../api/priceLists';
 import { useBranchAccess } from '../hooks/useBranchAccess';
 
 const operationTypeLabels = {
@@ -41,6 +42,7 @@ export default function ProductStockPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [blockSizeMap, setBlockSizeMap] = useState({});
   const [showWriteOffModal, setShowWriteOffModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
 
@@ -57,10 +59,11 @@ export default function ProductStockPage() {
   async function loadInitialData() {
     setLoading(true);
     try {
-      const [recipesData, branchesData, summaryData] = await Promise.all([
+      const [recipesData, branchesData, summaryData, priceListsData] = await Promise.all([
         getRecipes(),
         getBranches(),
-        getStockSummary()
+        getStockSummary(),
+        getPriceLists(null, true).catch(() => [])
       ]);
       setRecipes(recipesData.filter(r => r.status === 'Active'));
       const activeBranches = branchesData.filter(b => b.status === 'Active');
@@ -68,6 +71,20 @@ export default function ProductStockPage() {
       setBranches(allowed);
       setSelectedBranch(getDefaultBranchId(allowed));
       setSummary(summaryData);
+
+      // Build recipeId -> blockSize map from all active price lists
+      const bsMap = {};
+      for (const pl of priceListsData) {
+        try {
+          const detail = await getPriceListDetail(pl.id);
+          for (const item of detail.items || []) {
+            if (!bsMap[item.recipeId] && (item.blockSize || 1) > 1) {
+              bsMap[item.recipeId] = item.blockSize;
+            }
+          }
+        } catch { /* skip */ }
+      }
+      setBlockSizeMap(bsMap);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -242,6 +259,7 @@ export default function ProductStockPage() {
                       <tr className="border-b border-[hsl(var(--border))]">
                         <th className={`text-left p-3 ${mutedClass} font-medium`}>Продукт</th>
                         <th className={`text-right p-3 ${mutedClass} font-medium`}>Количество</th>
+                        <th className={`text-right p-3 ${mutedClass} font-medium`}>Кол-во блоков</th>
                         <th className={`text-right p-3 ${mutedClass} font-medium`}>Стоимость TJS</th>
                         <th className={`text-right p-3 ${mutedClass} font-medium`}>Стоимость USD</th>
                       </tr>
@@ -254,6 +272,12 @@ export default function ProductStockPage() {
                             <div className={`text-sm ${mutedClass}`}>{product.recipeName}</div>
                           </td>
                           <td className={`p-3 text-right ${textClass}`}>{product.totalQuantity} шт</td>
+                          <td className={`p-3 text-right ${textClass}`}>
+                            {blockSizeMap[product.recipeId]
+                              ? `${Math.floor(product.totalQuantity / blockSizeMap[product.recipeId])} бл (×${blockSizeMap[product.recipeId]})`
+                              : <span className={mutedClass}>—</span>
+                            }
+                          </td>
                           <td className={`p-3 text-right ${textClass}`}>{product.totalValueTjs.toFixed(2)}</td>
                           <td className={`p-3 text-right ${textClass}`}>${product.totalValueUsd.toFixed(2)}</td>
                         </tr>

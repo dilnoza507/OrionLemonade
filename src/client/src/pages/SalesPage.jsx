@@ -327,7 +327,7 @@ export default function SalesPage() {
                       >
                         <Eye className="w-4 h-4 text-[hsl(var(--primary))]" />
                       </button>
-                      {sale.statusName === 'Черновик' && (
+                      {!['Оплачено', 'Отменено'].includes(sale.statusName) && (
                         <>
                           <button
                             onClick={() => handleEdit(sale)}
@@ -448,11 +448,17 @@ function CreateSaleModal({ branches, clients, recipes, priceLists, defaults = {}
   });
   const [items, setItems] = useState(
     defaults.recipeId
-      ? [{ recipeId: defaults.recipeId.toString(), quantity: '1', unitPriceTjs: '' }]
+      ? [{ recipeId: defaults.recipeId.toString(), quantity: '1', unitPriceTjs: '', pricePerBlockTjs: '', blockSize: 1, useBlocks: false }]
       : []
   );
   const [saving, setSaving] = useState(false);
   const [priceListItems, setPriceListItems] = useState([]);
+  const [autoConfirmShip, setAutoConfirmShip] = useState(false);
+  const [payment, setPayment] = useState({
+    amountTjs: '',
+    method: 'Cash',
+    paymentDate: new Date().toISOString().split('T')[0]
+  });
 
   // Filter price lists by selected branch
   const filteredPriceLists = priceLists.filter(pl =>
@@ -471,7 +477,10 @@ function CreateSaleModal({ branches, clients, recipes, priceLists, defaults = {}
             setItems(prev => prev.map(item => {
               if (!item.recipeId) return item;
               const match = loaded.find(pi => pi.recipeId.toString() === item.recipeId.toString());
-              return match ? { ...item, unitPriceTjs: match.priceTjs.toString() } : item;
+              if (!match) return item;
+              const bs = match.blockSize || 1;
+              const ppb = match.pricePerBlockTjs != null ? match.pricePerBlockTjs : match.priceTjs * bs;
+              return { ...item, unitPriceTjs: match.priceTjs.toString(), pricePerBlockTjs: ppb.toString(), blockSize: bs, useBlocks: bs > 1 };
             }));
           }
         })
@@ -482,18 +491,23 @@ function CreateSaleModal({ branches, clients, recipes, priceLists, defaults = {}
   }, [form.priceListId]);
 
   function addItem() {
-    setItems([...items, { recipeId: '', quantity: '1', unitPriceTjs: '' }]);
+    setItems([...items, { recipeId: '', quantity: '1', unitPriceTjs: '', pricePerBlockTjs: '', blockSize: 1, useBlocks: false }]);
   }
 
   function updateItem(index, field, value) {
     const newItems = [...items];
     newItems[index][field] = value;
 
-    // Auto-fill price when recipe is selected
+    // Auto-fill price and blockSize when recipe is selected
     if (field === 'recipeId' && value && priceListItems.length > 0) {
       const priceItem = priceListItems.find(pi => pi.recipeId.toString() === value);
       if (priceItem) {
         newItems[index].unitPriceTjs = priceItem.priceTjs.toString();
+        const bs = priceItem.blockSize || 1;
+        const ppb = priceItem.pricePerBlockTjs != null ? priceItem.pricePerBlockTjs : priceItem.priceTjs * bs;
+        newItems[index].pricePerBlockTjs = ppb.toString();
+        newItems[index].blockSize = bs;
+        newItems[index].useBlocks = bs > 1;
       }
     }
 
@@ -506,8 +520,10 @@ function CreateSaleModal({ branches, clients, recipes, priceLists, defaults = {}
 
   const total = items.reduce((acc, item) => {
     const qty = parseInt(item.quantity) || 0;
-    const price = parseFloat(item.unitPriceTjs) || 0;
-    return acc + qty * price;
+    if (item.useBlocks) {
+      return acc + qty * (parseFloat(item.pricePerBlockTjs) || 0);
+    }
+    return acc + qty * (parseFloat(item.unitPriceTjs) || 0);
   }, 0);
 
   async function handleSubmit(e) {
@@ -517,7 +533,7 @@ function CreateSaleModal({ branches, clients, recipes, priceLists, defaults = {}
       return;
     }
 
-    const invalidItems = items.filter(i => !i.recipeId || !i.quantity || !i.unitPriceTjs);
+    const invalidItems = items.filter(i => !i.recipeId || !i.quantity || (i.useBlocks ? !i.pricePerBlockTjs : !i.unitPriceTjs));
     if (invalidItems.length > 0) {
       setError('Заполните все поля позиций');
       return;
@@ -525,7 +541,7 @@ function CreateSaleModal({ branches, clients, recipes, priceLists, defaults = {}
 
     setSaving(true);
     try {
-      await createSale({
+      const sale = await createSale({
         branchId: parseInt(form.branchId),
         saleDate: new Date(form.saleDate).toISOString(),
         clientId: parseInt(form.clientId),
@@ -534,10 +550,26 @@ function CreateSaleModal({ branches, clients, recipes, priceLists, defaults = {}
         notes: form.notes || null,
         items: items.map(i => ({
           recipeId: parseInt(i.recipeId),
-          quantity: parseInt(i.quantity),
-          unitPriceTjs: parseFloat(i.unitPriceTjs)
+          quantity: i.useBlocks ? (parseInt(i.quantity) || 0) * (i.blockSize || 1) : (parseInt(i.quantity) || 0),
+          unitPriceTjs: i.useBlocks
+            ? (parseFloat(i.pricePerBlockTjs) || 0) / (i.blockSize || 1)
+            : parseFloat(i.unitPriceTjs)
         }))
       });
+
+      if (autoConfirmShip) {
+        await confirmSale(sale.id);
+        await shipSale(sale.id);
+        if (payment.amountTjs && parseFloat(payment.amountTjs) > 0) {
+          await addPayment(sale.id, {
+            amountTjs: parseFloat(payment.amountTjs),
+            method: payment.method,
+            paymentDate: new Date(payment.paymentDate).toISOString(),
+            notes: null
+          });
+        }
+      }
+
       onSave();
     } catch (err) {
       setError(err.message);
@@ -660,11 +692,11 @@ function CreateSaleModal({ branches, clients, recipes, priceLists, defaults = {}
             </div>
             <div className="space-y-2">
               {items.map((item, index) => (
-                <div key={index} className="flex gap-2 items-center p-2 bg-[hsl(var(--muted))]/30 rounded-lg">
+                <div key={index} className="flex gap-2 items-center p-2 bg-[hsl(var(--muted))]/30 rounded-lg flex-wrap">
                   <select
                     value={item.recipeId}
                     onChange={e => updateItem(index, 'recipeId', e.target.value)}
-                    className="flex-1 px-2 py-1.5 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm"
+                    className="flex-1 min-w-[140px] px-2 py-1.5 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm"
                     required
                   >
                     <option value="">Выберите продукт</option>
@@ -672,27 +704,70 @@ function CreateSaleModal({ branches, clients, recipes, priceLists, defaults = {}
                       <option key={r.id} value={r.id}>{r.productName}</option>
                     ))}
                   </select>
+                  {/* Unit toggle */}
+                  <select
+                    value={item.useBlocks ? 'block' : 'pcs'}
+                    onChange={e => updateItem(index, 'useBlocks', e.target.value === 'block')}
+                    className="w-20 px-2 py-1.5 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm"
+                  >
+                    <option value="pcs">шт</option>
+                    <option value="block">блок</option>
+                  </select>
+                  {/* Quantity */}
                   <input
                     type="number"
                     min="1"
-                    placeholder="Кол-во"
+                    placeholder={item.useBlocks ? 'Блоков' : 'Кол-во'}
                     value={item.quantity}
                     onChange={e => updateItem(index, 'quantity', e.target.value)}
                     className="w-20 px-2 py-1.5 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm"
                     required
                   />
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="Цена TJS"
-                    value={item.unitPriceTjs}
-                    onChange={e => updateItem(index, 'unitPriceTjs', e.target.value)}
-                    className="w-28 px-2 py-1.5 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm"
-                    required
-                  />
+                  {/* Block size + pcs count */}
+                  {item.useBlocks && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-[hsl(var(--muted-foreground))]">×</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.blockSize}
+                        onChange={e => updateItem(index, 'blockSize', parseInt(e.target.value) || 1)}
+                        className="w-14 px-2 py-1.5 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm text-center"
+                        title="Штук в блоке"
+                      />
+                      <span className="text-xs text-[hsl(var(--muted-foreground))] whitespace-nowrap">
+                        = {(parseInt(item.quantity) || 0) * (item.blockSize || 1)} шт
+                      </span>
+                    </div>
+                  )}
+                  {item.useBlocks ? (
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Цена/блок TJS"
+                      value={item.pricePerBlockTjs}
+                      onChange={e => updateItem(index, 'pricePerBlockTjs', e.target.value)}
+                      className="w-28 px-2 py-1.5 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm"
+                      required
+                    />
+                  ) : (
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Цена/шт TJS"
+                      value={item.unitPriceTjs}
+                      onChange={e => updateItem(index, 'unitPriceTjs', e.target.value)}
+                      className="w-28 px-2 py-1.5 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm"
+                      required
+                    />
+                  )}
                   <div className="w-24 text-right text-sm font-medium text-[hsl(var(--foreground))]">
-                    {((parseInt(item.quantity) || 0) * (parseFloat(item.unitPriceTjs) || 0)).toLocaleString()} TJS
+                    {item.useBlocks
+                      ? ((parseInt(item.quantity) || 0) * (parseFloat(item.pricePerBlockTjs) || 0)).toLocaleString()
+                      : ((parseInt(item.quantity) || 0) * (parseFloat(item.unitPriceTjs) || 0)).toLocaleString()
+                    } TJS
                   </div>
                   <button
                     type="button"
@@ -707,6 +782,51 @@ function CreateSaleModal({ branches, clients, recipes, priceLists, defaults = {}
                 <p className="text-center text-[hsl(var(--muted-foreground))] py-4">Добавьте позиции</p>
               )}
             </div>
+          </div>
+
+          {/* Auto confirm/ship + payment */}
+          <div className="border border-[hsl(var(--border))] rounded-lg p-3 space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoConfirmShip}
+                onChange={e => setAutoConfirmShip(e.target.checked)}
+                className="w-4 h-4 accent-[hsl(var(--primary))]"
+              />
+              <span className="text-sm font-medium text-[hsl(var(--foreground))]">
+                Подтвердить и отгрузить сразу
+              </span>
+            </label>
+            {autoConfirmShip && (
+              <div className="space-y-2 pt-1">
+                <p className="text-xs text-[hsl(var(--muted-foreground))]">Оплата (необязательно)</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Сумма (TJS)"
+                    value={payment.amountTjs}
+                    onChange={e => setPayment({ ...payment, amountTjs: e.target.value })}
+                    className="px-2 py-1.5 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm"
+                  />
+                  <select
+                    value={payment.method}
+                    onChange={e => setPayment({ ...payment, method: e.target.value })}
+                    className="px-2 py-1.5 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm"
+                  >
+                    <option value="Cash">Наличные</option>
+                    <option value="BankTransfer">Перевод</option>
+                  </select>
+                  <input
+                    type="date"
+                    value={payment.paymentDate}
+                    onChange={e => setPayment({ ...payment, paymentDate: e.target.value })}
+                    className="px-2 py-1.5 rounded border border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-between items-center pt-2 border-t border-[hsl(var(--border))]">
@@ -726,7 +846,7 @@ function CreateSaleModal({ branches, clients, recipes, priceLists, defaults = {}
                 disabled={saving}
                 className="px-4 py-2 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary))]/90 disabled:opacity-50"
               >
-                {saving ? 'Создание...' : 'Создать'}
+                {saving ? 'Сохранение...' : autoConfirmShip ? 'Создать и отгрузить' : 'Создать'}
               </button>
             </div>
           </div>

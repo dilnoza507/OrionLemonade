@@ -30,15 +30,15 @@ export async function getDashboardSummary(branchId = null) {
     apiGet(`/warehouse/receipts${branchId ? `?branchId=${branchId}` : ''}`).catch(() => [])
   ]);
 
-  // Calculate sales revenue this month
+  // Calculate sales revenue this month (total billed, excluding cancelled)
   const revenueThisMonth = salesThisMonth
-    .filter(s => s.paymentStatus === 'Paid' || s.paymentStatus === 'PartiallyPaid')
-    .reduce((sum, s) => sum + (s.paidAmount || 0), 0);
+    .filter(s => s.statusName !== 'Отменено')
+    .reduce((sum, s) => sum + (s.totalTjs || 0), 0);
 
   // Calculate sales revenue last month
   const revenueLastMonth = salesLastMonth
-    .filter(s => s.paymentStatus === 'Paid' || s.paymentStatus === 'PartiallyPaid')
-    .reduce((sum, s) => sum + (s.paidAmount || 0), 0);
+    .filter(s => s.statusName !== 'Отменено')
+    .reduce((sum, s) => sum + (s.totalTjs || 0), 0);
 
   // Calculate expenses this month (from summary)
   const expensesThisMonth = expensesSummary.reduce((sum, s) => sum + (s.totalAmountTjs || 0), 0);
@@ -59,7 +59,7 @@ export async function getDashboardSummary(branchId = null) {
   const recentOperations = [
     ...salesThisMonth.slice(0, 5).map(s => ({
       type: 'sale',
-      text: `Продажа ${s.saleNumber} - ${s.totalAmount?.toLocaleString()} TJS`,
+      text: `Продажа ${s.saleNumber} - ${s.totalTjs?.toLocaleString()} TJS`,
       date: s.saleDate,
       status: s.paymentStatus
     })),
