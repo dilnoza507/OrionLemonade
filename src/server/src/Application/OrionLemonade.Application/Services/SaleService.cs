@@ -35,10 +35,10 @@ public class SaleService : ISaleService
             query = query.Where(s => s.ClientId == clientId.Value);
 
         if (from.HasValue)
-            query = query.Where(s => s.SaleDate >= from.Value);
+            query = query.Where(s => s.SaleDate >= DateTime.SpecifyKind(from.Value, DateTimeKind.Utc));
 
         if (to.HasValue)
-            query = query.Where(s => s.SaleDate <= to.Value);
+            query = query.Where(s => s.SaleDate <= DateTime.SpecifyKind(to.Value, DateTimeKind.Utc));
 
         var sales = await query
             .OrderByDescending(s => s.SaleDate)

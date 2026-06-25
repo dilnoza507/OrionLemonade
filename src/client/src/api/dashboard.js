@@ -2,14 +2,15 @@ import { apiGet } from './client';
 
 // Get dashboard summary data
 export async function getDashboardSummary(branchId = null) {
-  // Get current month range
+  // Get current month range (UTC to avoid DateTimeKind mismatch in backend)
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  const y = now.getFullYear(), m = now.getMonth();
+  const startOfMonth = new Date(Date.UTC(y, m, 1)).toISOString();
+  const endOfMonth = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59, 999)).toISOString();
 
   // Get last month range for comparison
-  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
-  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+  const startOfLastMonth = new Date(Date.UTC(y, m - 1, 1)).toISOString();
+  const endOfLastMonth = new Date(Date.UTC(y, m, 0, 23, 59, 59, 999)).toISOString();
 
   const branch = branchId ? `&branchId=${branchId}` : '';
 
@@ -22,9 +23,9 @@ export async function getDashboardSummary(branchId = null) {
     recentProductions,
     recentReceipts
   ] = await Promise.all([
-    apiGet(`/sales?dateFrom=${startOfMonth}&dateTo=${endOfMonth}${branch}`).catch(() => []),
-    apiGet(`/sales?dateFrom=${startOfLastMonth}&dateTo=${endOfLastMonth}${branch}`).catch(() => []),
-    apiGet(`/expenses/summary${branchId ? `?branchId=${branchId}` : ''}`).catch(() => []),
+    apiGet(`/sales?from=${startOfMonth}&to=${endOfMonth}${branch}`).catch(() => []),
+    apiGet(`/sales?from=${startOfLastMonth}&to=${endOfLastMonth}${branch}`).catch(() => []),
+    apiGet(`/expenses/summary?from=${startOfMonth}&to=${endOfMonth}`).catch(() => []),
     apiGet(`/warehouse/stock/low${branchId ? `?branchId=${branchId}` : ''}`).catch(() => []),
     apiGet(`/production${branchId ? `?branchId=${branchId}` : ''}`).catch(() => []),
     apiGet(`/warehouse/receipts${branchId ? `?branchId=${branchId}` : ''}`).catch(() => [])
@@ -52,8 +53,8 @@ export async function getDashboardSummary(branchId = null) {
   const profit = revenueThisMonth - expensesThisMonth;
   const margin = revenueThisMonth > 0 ? (profit / revenueThisMonth * 100).toFixed(1) : 0;
 
-  // Sales count this month
-  const salesCount = salesThisMonth.length;
+  // Sales count this month (excluding cancelled)
+  const salesCount = salesThisMonth.filter(s => s.statusName !== 'Отменено').length;
 
   // Recent operations (combine and sort)
   const recentOperations = [

@@ -97,10 +97,10 @@ public class ExpenseService : IExpenseService
             query = query.Where(e => e.CategoryId == categoryId.Value);
 
         if (from.HasValue)
-            query = query.Where(e => e.ExpenseDate >= from.Value);
+            query = query.Where(e => e.ExpenseDate >= DateTime.SpecifyKind(from.Value, DateTimeKind.Utc));
 
         if (to.HasValue)
-            query = query.Where(e => e.ExpenseDate <= to.Value);
+            query = query.Where(e => e.ExpenseDate <= DateTime.SpecifyKind(to.Value, DateTimeKind.Utc));
 
         var expenses = await query
             .OrderByDescending(e => e.ExpenseDate)
@@ -200,10 +200,10 @@ public class ExpenseService : IExpenseService
             .AsQueryable();
 
         if (from.HasValue)
-            query = query.Where(e => e.ExpenseDate >= from.Value);
+            query = query.Where(e => e.ExpenseDate >= DateTime.SpecifyKind(from.Value, DateTimeKind.Utc));
 
         if (to.HasValue)
-            query = query.Where(e => e.ExpenseDate <= to.Value);
+            query = query.Where(e => e.ExpenseDate <= DateTime.SpecifyKind(to.Value, DateTimeKind.Utc));
 
         var expenses = await query.ToListAsync();
 
