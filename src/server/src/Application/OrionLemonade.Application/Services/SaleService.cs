@@ -121,6 +121,7 @@ public class SaleService : ISaleService
                 SaleId = sale.Id,
                 RecipeId = itemDto.RecipeId,
                 Quantity = itemDto.Quantity,
+                BlockSize = itemDto.BlockSize > 0 ? itemDto.BlockSize : 1,
                 UnitPriceTjs = itemDto.UnitPriceTjs,
                 TotalTjs = itemTotal,
                 UnitCostUsd = 0, // Will be set when shipped
@@ -170,6 +171,7 @@ public class SaleService : ISaleService
                     SaleId = sale.Id,
                     RecipeId = itemDto.RecipeId,
                     Quantity = itemDto.Quantity,
+                    BlockSize = itemDto.BlockSize > 0 ? itemDto.BlockSize : 1,
                     UnitPriceTjs = itemDto.UnitPriceTjs,
                     TotalTjs = itemTotal,
                     UnitCostUsd = 0,
@@ -514,6 +516,7 @@ public class SaleService : ISaleService
             RecipeName = entity.Recipe?.Name ?? string.Empty,
             ProductName = entity.Recipe?.ProductName ?? string.Empty,
             Quantity = entity.Quantity,
+            BlockSize = entity.BlockSize,
             UnitPriceTjs = entity.UnitPriceTjs,
             TotalTjs = entity.TotalTjs,
             UnitCostUsd = entity.UnitCostUsd,

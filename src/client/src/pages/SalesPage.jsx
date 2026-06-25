@@ -551,6 +551,7 @@ function CreateSaleModal({ branches, clients, recipes, priceLists, defaults = {}
         items: items.map(i => ({
           recipeId: parseInt(i.recipeId),
           quantity: i.useBlocks ? (parseInt(i.quantity) || 0) * (i.blockSize || 1) : (parseInt(i.quantity) || 0),
+          blockSize: i.useBlocks ? (i.blockSize || 1) : 1,
           unitPriceTjs: i.useBlocks
             ? (parseFloat(i.pricePerBlockTjs) || 0) / (i.blockSize || 1)
             : parseFloat(i.unitPriceTjs)
@@ -1298,20 +1299,33 @@ function SaleDetailModal({ sale, onClose, onRefresh, setError }) {
               <thead>
                 <tr className="border-b border-[hsl(var(--border))]">
                   <th className="text-left p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm">Продукт</th>
-                  <th className="text-right p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm">Кол-во</th>
-                  <th className="text-right p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm">Цена (TJS)</th>
+                  <th className="text-right p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm">Кол-во (шт)</th>
+                  <th className="text-right p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm">Кол-во блоков</th>
+                  <th className="text-right p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm">Цена/шт (TJS)</th>
+                  <th className="text-right p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm">Цена/блок (TJS)</th>
                   <th className="text-right p-2 text-[hsl(var(--muted-foreground))] font-medium text-sm">Сумма (TJS)</th>
                 </tr>
               </thead>
               <tbody>
-                {sale.items.map(item => (
-                  <tr key={item.id} className="border-b border-[hsl(var(--border))] last:border-0">
-                    <td className="p-2 text-[hsl(var(--foreground))]">{item.productName}</td>
-                    <td className="p-2 text-right text-[hsl(var(--foreground))]">{item.quantity}</td>
-                    <td className="p-2 text-right text-[hsl(var(--foreground))]">{item.unitPriceTjs.toLocaleString()}</td>
-                    <td className="p-2 text-right font-medium text-[hsl(var(--foreground))]">{item.totalTjs.toLocaleString()}</td>
-                  </tr>
-                ))}
+                {sale.items.map(item => {
+                  const bs = item.blockSize || 1;
+                  const blockCount = bs > 1 ? Math.floor(item.quantity / bs) : null;
+                  const pricePerBlock = bs > 1 ? (item.unitPriceTjs * bs) : null;
+                  return (
+                    <tr key={item.id} className="border-b border-[hsl(var(--border))] last:border-0">
+                      <td className="p-2 text-[hsl(var(--foreground))]">{item.productName}</td>
+                      <td className="p-2 text-right text-[hsl(var(--foreground))]">{item.quantity}</td>
+                      <td className="p-2 text-right text-[hsl(var(--muted-foreground))]">
+                        {blockCount !== null ? `${blockCount} ×${bs}` : '—'}
+                      </td>
+                      <td className="p-2 text-right text-[hsl(var(--foreground))]">{item.unitPriceTjs.toLocaleString()}</td>
+                      <td className="p-2 text-right text-[hsl(var(--muted-foreground))]">
+                        {pricePerBlock !== null ? pricePerBlock.toLocaleString() : '—'}
+                      </td>
+                      <td className="p-2 text-right font-medium text-[hsl(var(--foreground))]">{item.totalTjs.toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

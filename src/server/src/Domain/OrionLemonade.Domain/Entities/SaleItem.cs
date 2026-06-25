@@ -6,6 +6,7 @@ public class SaleItem
     public int SaleId { get; set; }
     public int RecipeId { get; set; }
     public int Quantity { get; set; }
+    public int BlockSize { get; set; } = 1;
     public decimal UnitPriceTjs { get; set; }
     public decimal TotalTjs { get; set; }
     public decimal UnitCostUsd { get; set; }

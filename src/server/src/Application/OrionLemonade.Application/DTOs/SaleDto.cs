@@ -65,6 +65,7 @@ public class SaleItemDto
     public string RecipeName { get; set; } = string.Empty;
     public string ProductName { get; set; } = string.Empty;
     public int Quantity { get; set; }
+    public int BlockSize { get; set; } = 1;
     public decimal UnitPriceTjs { get; set; }
     public decimal TotalTjs { get; set; }
     public decimal UnitCostUsd { get; set; }
@@ -101,6 +102,7 @@ public class CreateSaleItemDto
 {
     public int RecipeId { get; set; }
     public int Quantity { get; set; }
+    public int BlockSize { get; set; } = 1;
     public decimal UnitPriceTjs { get; set; }
 }
 
@@ -118,6 +120,7 @@ public class UpdateSaleItemDto
 {
     public int RecipeId { get; set; }
     public int Quantity { get; set; }
+    public int BlockSize { get; set; } = 1;
     public decimal UnitPriceTjs { get; set; }
 }
 
