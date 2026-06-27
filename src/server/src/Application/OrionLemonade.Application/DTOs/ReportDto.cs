@@ -10,6 +10,11 @@ public class GeneralReportDto
     public decimal ExpensesTotal { get; set; }
     public List<PayrollReportItem> Payroll { get; set; } = new();
     public PayrollTotals PayrollTotals { get; set; } = new();
+    public List<ProcurementReportItem> Procurement { get; set; } = new();
+    public decimal ProcurementTotalUsd { get; set; }
+    public decimal ProcurementTotalTjs { get; set; }
+    public decimal ProcurementTotalConvertedTjs { get; set; }
+    public decimal ExchangeRate { get; set; }
     public ReportSummary Summary { get; set; } = new();
 }
 
@@ -60,11 +65,24 @@ public class PayrollTotals
     public decimal TotalNet { get; set; }
 }
 
+public class ProcurementReportItem
+{
+    public int IngredientId { get; set; }
+    public string IngredientName { get; set; } = string.Empty;
+    public string Unit { get; set; } = string.Empty;
+    public decimal TotalQuantity { get; set; }
+    public decimal TotalUsd { get; set; }
+    public decimal TotalTjs { get; set; }
+    public decimal TotalConvertedTjs { get; set; }   // TotalTjs + TotalUsd * exchangeRate
+    public int ReceiptsCount { get; set; }
+}
+
 public class ReportSummary
 {
     public decimal Revenue { get; set; }
     public decimal Expenses { get; set; }
     public decimal Payroll { get; set; }
+    public decimal Procurement { get; set; }
     public decimal NetProfit { get; set; }
 }
 

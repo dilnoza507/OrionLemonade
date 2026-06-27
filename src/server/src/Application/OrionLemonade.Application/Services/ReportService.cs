@@ -53,13 +53,26 @@ public class ReportService : IReportService
             TotalNet = report.Payroll.Sum(x => x.NetTotal)
         };
 
-        // 4. Summary
+        // 4. Procurement
+        var exchangeRate = await _dbContext.Set<ExchangeRate>()
+            .OrderByDescending(r => r.RateDate)
+            .FirstOrDefaultAsync(cancellationToken);
+        var rate = exchangeRate?.Rate ?? 10.9m;
+
+        report.ExchangeRate = rate;
+        report.Procurement = await GetProcurementAsync(startDate, endDate, request.BranchId, rate, cancellationToken);
+        report.ProcurementTotalUsd = report.Procurement.Sum(x => x.TotalUsd);
+        report.ProcurementTotalTjs = report.Procurement.Sum(x => x.TotalTjs);
+        report.ProcurementTotalConvertedTjs = report.Procurement.Sum(x => x.TotalConvertedTjs);
+
+        // 5. Summary
         report.Summary = new ReportSummary
         {
             Revenue = report.SalesTotals.TotalAmount,
             Expenses = report.ExpensesTotal,
             Payroll = report.PayrollTotals.TotalNet,
-            NetProfit = report.SalesTotals.TotalAmount - report.ExpensesTotal - report.PayrollTotals.TotalNet
+            Procurement = report.ProcurementTotalConvertedTjs,
+            NetProfit = report.SalesTotals.TotalAmount - report.ExpensesTotal - report.PayrollTotals.TotalNet - report.ProcurementTotalConvertedTjs
         };
 
         return report;
@@ -179,6 +192,38 @@ public class ReportService : IReportService
         return result;
     }
 
+    private async Task<List<ProcurementReportItem>> GetProcurementAsync(DateTime startDate, DateTime endDate, int? branchId, decimal exchangeRate, CancellationToken cancellationToken)
+    {
+        var query = _dbContext.Set<IngredientReceipt>()
+            .Include(r => r.Ingredient)
+            .Where(r => r.ReceiptDate >= startDate && r.ReceiptDate <= endDate);
+
+        if (branchId.HasValue)
+            query = query.Where(r => r.BranchId == branchId.Value);
+
+        var receipts = await query.ToListAsync(cancellationToken);
+
+        return receipts
+            .GroupBy(r => new { r.IngredientId, Name = r.Ingredient?.Name ?? "—", Unit = r.Unit.ToString() })
+            .Select(g => {
+                var totalUsd = g.Sum(r => r.Currency == Domain.Enums.Currency.Usd ? r.TotalPrice : 0);
+                var totalTjs = g.Sum(r => r.Currency == Domain.Enums.Currency.Tjs ? r.TotalPrice : 0);
+                return new ProcurementReportItem
+                {
+                    IngredientId = g.Key.IngredientId,
+                    IngredientName = g.Key.Name,
+                    Unit = g.Key.Unit,
+                    TotalQuantity = g.Sum(r => r.Quantity),
+                    TotalUsd = totalUsd,
+                    TotalTjs = totalTjs,
+                    TotalConvertedTjs = totalTjs + totalUsd * exchangeRate,
+                    ReceiptsCount = g.Count()
+                };
+            })
+            .OrderBy(x => x.IngredientName)
+            .ToList();
+    }
+
     public async Task<byte[]> ExportGeneralReportToExcelAsync(GeneralReportRequest request, CancellationToken cancellationToken = default)
     {
         var report = await GetGeneralReportAsync(request, cancellationToken);
@@ -281,7 +326,38 @@ public class ReportService : IReportService
 
         payrollSheet.Columns().AdjustToContents();
 
-        // 4. Summary sheet
+        // 4. Procurement sheet
+        var procSheet = workbook.Worksheets.Add("Приходы");
+        procSheet.Cell(1, 1).Value = $"Приходы за период: {report.StartDate:dd.MM.yyyy} - {report.EndDate:dd.MM.yyyy}";
+        procSheet.Range(1, 1, 1, 5).Merge().Style.Font.Bold = true;
+
+        var procHeaders = new[] { "Ингредиент", "Ед. изм.", "Кол-во", "Приходов", "Сумма (USD)", "Сумма (TJS)" };
+        for (int i = 0; i < procHeaders.Length; i++)
+        {
+            procSheet.Cell(3, i + 1).Value = procHeaders[i];
+            procSheet.Cell(3, i + 1).Style.Font.Bold = true;
+            procSheet.Cell(3, i + 1).Style.Fill.BackgroundColor = XLColor.LightGray;
+        }
+
+        row = 4;
+        foreach (var item in report.Procurement)
+        {
+            procSheet.Cell(row, 1).Value = item.IngredientName;
+            procSheet.Cell(row, 2).Value = item.Unit;
+            procSheet.Cell(row, 3).Value = item.TotalQuantity;
+            procSheet.Cell(row, 4).Value = item.ReceiptsCount;
+            procSheet.Cell(row, 5).Value = item.TotalUsd;
+            procSheet.Cell(row, 6).Value = item.TotalTjs;
+            row++;
+        }
+
+        procSheet.Cell(row, 1).Value = "ИТОГО";
+        procSheet.Cell(row, 5).Value = report.ProcurementTotalUsd;
+        procSheet.Cell(row, 6).Value = report.ProcurementTotalTjs;
+        procSheet.Row(row).Style.Font.Bold = true;
+        procSheet.Columns().AdjustToContents();
+
+        // 5. Summary sheet
         var summarySheet = workbook.Worksheets.Add("Итого");
         summarySheet.Cell(1, 1).Value = $"Итоговая сводка: {report.StartDate:dd.MM.yyyy} - {report.EndDate:dd.MM.yyyy}";
         summarySheet.Range(1, 1, 1, 2).Merge().Style.Font.Bold = true;
@@ -297,9 +373,11 @@ public class ReportService : IReportService
         summarySheet.Cell(5, 2).Value = -report.Summary.Expenses;
         summarySheet.Cell(6, 1).Value = "Зарплата";
         summarySheet.Cell(6, 2).Value = -report.Summary.Payroll;
-        summarySheet.Cell(7, 1).Value = "Чистая прибыль";
-        summarySheet.Cell(7, 2).Value = report.Summary.NetProfit;
-        summarySheet.Row(7).Style.Font.Bold = true;
+        summarySheet.Cell(7, 1).Value = $"Закупки (курс {report.ExchangeRate} TJS/USD)";
+        summarySheet.Cell(7, 2).Value = -report.Summary.Procurement;
+        summarySheet.Cell(8, 1).Value = "Чистая прибыль";
+        summarySheet.Cell(8, 2).Value = report.Summary.NetProfit;
+        summarySheet.Row(8).Style.Font.Bold = true;
 
         summarySheet.Columns().AdjustToContents();
 

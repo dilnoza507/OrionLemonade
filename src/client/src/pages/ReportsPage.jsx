@@ -317,13 +317,65 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {/* 4. Summary */}
+          {/* 4. Procurement */}
           <div className="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))]">
             <div className="p-4 border-b border-[hsl(var(--border))]">
-              <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">4. Итоговая сводка</h2>
+              <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">4. Приходы (закупки)</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
+                    <th className="text-left px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Ингредиент</th>
+                    <th className="text-right px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Ед. изм.</th>
+                    <th className="text-right px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Кол-во</th>
+                    <th className="text-right px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Приходов</th>
+                    <th className="text-right px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Сумма (USD)</th>
+                    <th className="text-right px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))]">Сумма (TJS)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.procurement.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-sm text-[hsl(var(--muted-foreground))]">
+                        Нет приходов за выбранный период
+                      </td>
+                    </tr>
+                  ) : (
+                    <>
+                      {report.procurement.map((item, index) => (
+                        <tr key={item.ingredientId} className={index !== report.procurement.length - 1 ? 'border-b border-[hsl(var(--border))]' : ''}>
+                          <td className="px-4 py-3 text-sm text-[hsl(var(--foreground))]">{item.ingredientName}</td>
+                          <td className="px-4 py-3 text-sm text-[hsl(var(--muted-foreground))] text-right">{item.unit}</td>
+                          <td className="px-4 py-3 text-sm text-[hsl(var(--foreground))] text-right">{item.totalQuantity}</td>
+                          <td className="px-4 py-3 text-sm text-[hsl(var(--muted-foreground))] text-right">{item.receiptsCount}</td>
+                          <td className="px-4 py-3 text-sm text-[hsl(var(--foreground))] text-right font-medium">
+                            {item.totalUsd > 0 ? formatMoney(item.totalUsd) : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-[hsl(var(--foreground))] text-right font-medium">
+                            {item.totalTjs > 0 ? formatMoney(item.totalTjs) : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="bg-[hsl(var(--muted))]/50 font-semibold">
+                        <td className="px-4 py-3 text-sm text-[hsl(var(--foreground))]" colSpan={4}>ИТОГО закупок</td>
+                        <td className="px-4 py-3 text-sm text-[hsl(var(--foreground))] text-right">{formatMoney(report.procurementTotalUsd)} USD</td>
+                        <td className="px-4 py-3 text-sm text-[hsl(var(--foreground))] text-right">{formatMoney(report.procurementTotalTjs)} TJS</td>
+                      </tr>
+                    </>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 5. Summary */}
+          <div className="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))]">
+            <div className="p-4 border-b border-[hsl(var(--border))]">
+              <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">5. Итоговая сводка</h2>
             </div>
             <div className="p-4">
-              <table className="w-full max-w-md">
+              <table className="w-full max-w-lg">
                 <tbody>
                   <tr className="border-b border-[hsl(var(--border))]">
                     <td className="py-3 text-sm text-[hsl(var(--foreground))]">Выручка</td>
@@ -336,6 +388,17 @@ export default function ReportsPage() {
                   <tr className="border-b border-[hsl(var(--border))]">
                     <td className="py-3 text-sm text-[hsl(var(--foreground))]">Зарплата</td>
                     <td className="py-3 text-sm text-[hsl(var(--destructive))] text-right font-medium">-{formatMoney(report.summary.payroll)} TJS</td>
+                  </tr>
+                  <tr className="border-b border-[hsl(var(--border))]">
+                    <td className="py-3 text-sm text-[hsl(var(--foreground))]">
+                      Закупки
+                      {report.procurementTotalUsd > 0 && (
+                        <span className="text-xs text-[hsl(var(--muted-foreground))] ml-2">
+                          ({formatMoney(report.procurementTotalUsd)} USD × {report.exchangeRate} = TJS)
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 text-sm text-[hsl(var(--destructive))] text-right font-medium">-{formatMoney(report.summary.procurement)} TJS</td>
                   </tr>
                   <tr>
                     <td className="py-3 text-base font-semibold text-[hsl(var(--foreground))]">Чистая прибыль</td>
